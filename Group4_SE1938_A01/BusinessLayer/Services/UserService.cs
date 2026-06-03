@@ -16,16 +16,147 @@ namespace BusinessLayer.Services
     {
         private readonly IGenericRepository<User> _userRepository;
         private readonly IGenericRepository<ChatSession> _chatSessionRepository;
+        private readonly EmailService _emailService;
         private readonly IConfiguration _configuration;
+        private const string DEFAULT_PASSWORD = "FptStudent@123";
 
         public UserService(
             IGenericRepository<User> userRepository,
             IGenericRepository<ChatSession> chatSessionRepository,
+            EmailService emailService,
             IConfiguration configuration)
         {
             _userRepository = userRepository;
             _chatSessionRepository = chatSessionRepository;
+            _emailService = emailService;
             _configuration = configuration;
+        }
+
+        private string GenerateUsername(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName)) return "student_" + Guid.NewGuid().ToString().Substring(0, 5);
+            
+            // Remove Vietnamese accents and spaces
+            string normalized = fullName.Normalize(NormalizationForm.FormD);
+            StringBuilder sb = new StringBuilder();
+
+            foreach (char c in normalized)
+            {
+                System.Globalization.UnicodeCategory uc = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+                if (uc != System.Globalization.UnicodeCategory.NonSpacingMark)
+                {
+                    if (char.IsLetterOrDigit(c))
+                    {
+                        sb.Append(char.ToLower(c));
+                    }
+                }
+            }
+            return sb.ToString().Normalize(NormalizationForm.FormC);
+        }
+
+        public async Task<UserDto?> CreateStudentAccountAsync(string fullName, string email)
+        {
+            // Validate if user already exists
+            var existing = await _userRepository.GetAllAsync(u => u.Email == email);
+            if (existing.Any()) return MapToDto(existing.First());
+
+            string username = GenerateUsername(fullName);
+            // Check if username unique
+            var existingUsername = await _userRepository.GetAllAsync(u => u.Username == username);
+            if (existingUsername.Any())
+            {
+                username += new Random().Next(10, 99);
+            }
+
+            var user = new User
+            {
+                Username = username,
+                PasswordHash = HashPassword(DEFAULT_PASSWORD),
+                FullName = fullName,
+                Email = email,
+                Role = "Student"
+            };
+
+            await _userRepository.AddAsync(user);
+            await _userRepository.SaveAsync();
+
+            // Send notification email
+            string subject = "Tài khoản học tập RAG LMS FPT của bạn";
+            string body = $@"
+                <div style='font-family: Arial, sans-serif; max-width: 600px; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; background-color: #ffffff;'>
+                    <h2 style='color: #4f46e5; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;'>Chào mừng {fullName} đến với hệ thống RAG LMS!</h2>
+                    <p style='color: #334155; font-size: 16px;'>Tài khoản sinh viên của bạn đã được khởi tạo thành công:</p>
+                    <div style='background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;'>
+                        <p style='margin: 8px 0; color: #475569;'><b>Tên tài khoản (Username):</b> {username}</p>
+                        <p style='margin: 8px 0; color: #475569;'><b>Email đăng nhập:</b> {email}</p>
+                        <p style='margin: 8px 0; color: #e11d48;'><b>Mật khẩu mặc định:</b> {DEFAULT_PASSWORD}</p>
+                    </div>
+                    <p style='color: #ef4444; font-weight: bold;'>* Lưu ý quan trọng: Bạn bắt buộc phải đổi mật khẩu mặc định ngay ở lần đăng nhập đầu tiên tại trang cá nhân (Profile) để kích hoạt toàn bộ tính năng.</p>
+                    <p style='color: #94a3b8; font-size: 12px; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 15px;'>Thư này được gửi tự động bởi hệ thống Quản lý học liệu PRN222 FPT.</p>
+                </div>";
+
+            await _emailService.SendEmailAsync(email, subject, body);
+
+            return MapToDto(user);
+        }
+
+        public async Task<int> ImportStudentsFromCsvAsync(System.IO.Stream fileStream)
+        {
+            int successCount = 0;
+            using (var reader = new System.IO.StreamReader(fileStream, Encoding.UTF8))
+            {
+                string? line;
+                // Read header row
+                await reader.ReadLineAsync();
+
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    var parts = line.Split(',');
+                    if (parts.Length >= 2)
+                    {
+                        string fullName = parts[0].Trim();
+                        string email = parts[1].Trim();
+
+                        if (!string.IsNullOrEmpty(fullName) && !string.IsNullOrEmpty(email) && email.Contains("@"))
+                        {
+                            var created = await CreateStudentAccountAsync(fullName, email);
+                            if (created != null)
+                            {
+                                successCount++;
+                            }
+                        }
+                    }
+                }
+            }
+            return successCount;
+        }
+
+        public async Task<bool> ChangePasswordAsync(int userId, string oldPassword, string newPassword)
+        {
+            if (userId == 0) return false; // Admin config is read-only from appsettings.json
+            
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null) return false;
+
+            if (user.PasswordHash != HashPassword(oldPassword))
+            {
+                return false; // Old password mismatch
+            }
+
+            user.PasswordHash = HashPassword(newPassword);
+            _userRepository.Update(user);
+            await _userRepository.SaveAsync();
+            return true;
+        }
+
+        public async Task<bool> IsDefaultPasswordAsync(int userId)
+        {
+            if (userId == 0) return false;
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null) return false;
+
+            return user.PasswordHash == HashPassword(DEFAULT_PASSWORD);
         }
 
         private UserDto? MapToDto(User? user)
@@ -194,7 +325,6 @@ namespace BusinessLayer.Services
             if (userId != 0)
             {
                 // Xóa các ChatSession liên quan trước để tránh FK constraint violation
-                // (ChatHistories sẽ bị xóa theo cascade từ DB)
                 var sessions = await _chatSessionRepository.GetAllAsync(s => s.UserId == userId);
                 foreach (var session in sessions)
                 {

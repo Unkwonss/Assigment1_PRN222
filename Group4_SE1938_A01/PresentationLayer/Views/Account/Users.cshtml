@@ -245,9 +245,9 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-muted-custom">Mật khẩu <span class="text-danger">*</span></label>
+                        <label class="form-label text-muted-custom" id="passwordLabel">Mật khẩu</label>
                         <input type="password" name="Password" class="form-control form-glass"
-                               placeholder="••••••••" required minlength="6" maxlength="100" id="createPassword" />
+                               placeholder="••••••••" minlength="6" maxlength="100" id="createPassword" />
                         <div class="invalid-feedback">Mật khẩu phải có ít nhất 6 ký tự.</div>
                     </div>
 
@@ -385,6 +385,27 @@
                     document.getElementById('deleteUserForm').submit();
                 }
             });
+        }
+
+        // --- Dynamic Password Requirement based on Role ---
+        var createRoleSelect = document.getElementById('createRole');
+        var createPasswordInput = document.getElementById('createPassword');
+        var passwordLabelElement = document.getElementById('passwordLabel');
+
+        function togglePasswordRequirement() {
+            if (createRoleSelect.value === 'Student') {
+                createPasswordInput.removeAttribute('required');
+                passwordLabelElement.innerHTML = 'Mật khẩu <small class="text-muted-custom">(để trống sẽ sử dụng mật khẩu mặc định FptStudent@@123)</small>';
+            } else {
+                createPasswordInput.setAttribute('required', 'required');
+                passwordLabelElement.innerHTML = 'Mật khẩu <span class="text-danger">*</span>';
+            }
+        }
+
+        if (createRoleSelect) {
+            createRoleSelect.addEventListener('change', togglePasswordRequirement);
+            // Initialize on load
+            togglePasswordRequirement();
         }
 
         // --- HTML5 Validation on modals ---

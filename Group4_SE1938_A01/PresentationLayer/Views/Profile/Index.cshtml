@@ -1,0 +1,102 @@
+@model BusinessLayer.DTOs.UserDto
+
+@{
+    ViewData["Title"] = "Trang cá nhân";
+    Layout = "_Layout";
+    bool isDefaultPassword = ViewBag.IsDefaultPassword ?? false;
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success bg-opacity-10 text-success border-success border-opacity-25 mb-4 d-flex align-items-center gap-2" role="alert">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <div>@TempData["Success"]</div>
+                </div>
+            }
+
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger bg-opacity-10 text-danger border-danger border-opacity-25 mb-4 d-flex align-items-center gap-2" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <div>@TempData["Error"]</div>
+                </div>
+            }
+
+            @if (TempData["Warning"] != null || isDefaultPassword)
+            {
+                <div class="alert alert-warning bg-opacity-10 text-warning border-warning border-opacity-25 mb-4 d-flex align-items-center gap-2" role="alert">
+                    <i class="bi bi-exclamation-octagon-fill fs-4"></i>
+                    <div>
+                        <strong>Yêu cầu bảo mật:</strong> @(TempData["Warning"] ?? "Bạn đang sử dụng mật khẩu mặc định của hệ thống. Bạn bắt buộc phải đổi mật khẩu để bảo vệ tài khoản.")
+                    </div>
+                </div>
+            }
+
+            <div class="card-glass shadow-lg mb-4">
+                <div class="card-body p-4 p-sm-5">
+                    <div class="d-flex flex-column flex-sm-row align-items-center gap-4 border-bottom border-white border-opacity-10 pb-4 mb-4">
+                        <div class="avatar-glow d-flex align-items-center justify-content-center text-white font-weight-bold" style="width: 80px; height: 80px; font-size: 2.5rem; border-radius: 50%;">
+                            @Model.FullName[0].ToString().ToUpper()
+                        </div>
+                        <div class="text-center text-sm-start">
+                            <h3 class="fw-bold text-white mb-1">@Model.FullName</h3>
+                            <p class="text-muted-custom mb-0 d-flex align-items-center justify-content-center justify-content-sm-start gap-2">
+                                <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-20">@Model.Role</span>
+                                <span>&bull;</span>
+                                <span>@Model.Email</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h5 class="text-white fw-bold mb-3">Thông tin tài khoản</h5>
+                            
+                            <div class="mb-3">
+                                <label class="small text-muted-custom d-block mb-1">Tên đăng nhập (Username)</label>
+                                <div class="form-control form-glass text-white bg-opacity-5 py-2 px-3">@Model.Username</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="small text-muted-custom d-block mb-1">Địa chỉ Email</label>
+                                <div class="form-control form-glass text-white bg-opacity-5 py-2 px-3">@Model.Email</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 border-start border-white border-opacity-10 ps-md-4">
+                            <h5 class="text-white fw-bold mb-3">Đổi mật khẩu</h5>
+                            
+                            <form asp-controller="Profile" asp-action="ChangePassword" method="post">
+                                @Html.AntiForgeryToken()
+                                
+                                <div class="mb-3">
+                                    <label class="form-label text-muted-custom">Mật khẩu hiện tại</label>
+                                    <input type="password" name="oldPassword" class="form-control form-glass" required placeholder="Nhập mật khẩu hiện tại" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label text-muted-custom">Mật khẩu mới</label>
+                                    <input type="password" name="newPassword" class="form-control form-glass" required placeholder="Ít nhất 6 ký tự" minlength="6" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label text-muted-custom">Xác nhận mật khẩu mới</label>
+                                    <input type="password" name="confirmPassword" class="form-control form-glass" required placeholder="Nhập lại mật khẩu mới" minlength="6" />
+                                </div>
+
+                                <button type="submit" class="btn btn-glow-primary w-100 py-2 mt-2">
+                                    <i class="bi bi-key-fill"></i> Cập nhật mật khẩu
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

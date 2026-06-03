@@ -4,6 +4,7 @@ using Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(Prn222AssigmentContext))]
-    partial class Prn222AssigmentContextModelSnapshot : ModelSnapshot
+    [Migration("20260603021701_AddManagedByUserIdToSubject")]
+    partial class AddManagedByUserIdToSubject
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -504,6 +507,9 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SubjectId"));
 
+                    b.Property<int?>("ManagedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<string>("SubjectCode")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -517,29 +523,12 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("SubjectId")
                         .HasName("PK__Subjects__AC1BA3A8AF32ACA7");
 
+                    b.HasIndex("ManagedByUserId");
+
                     b.HasIndex(new[] { "SubjectCode" }, "UQ__Subjects__9F7CE1A9B0A9231D")
                         .IsUnique();
 
                     b.ToTable("Subjects");
-                });
-
-            modelBuilder.Entity("Domain.Models.SubjectTeacher", b =>
-                {
-                    b.Property<int>("SubjectId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsSubjectHead")
-                        .HasColumnType("bit");
-
-                    b.HasKey("SubjectId", "UserId")
-                        .HasName("PK_SubjectTeachers");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("SubjectTeachers", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.TestSet", b =>
@@ -790,25 +779,15 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Strategy");
                 });
 
-            modelBuilder.Entity("Domain.Models.SubjectTeacher", b =>
+            modelBuilder.Entity("Domain.Models.Subject", b =>
                 {
-                    b.HasOne("Domain.Models.Subject", "Subject")
-                        .WithMany("SubjectTeachers")
-                        .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_SubjectTeachers_Subjects");
-
-                    b.HasOne("Domain.Models.User", "User")
+                    b.HasOne("Domain.Models.User", "ManagedByUser")
                         .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_SubjectTeachers_Users");
+                        .HasForeignKey("ManagedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_Subjects_Users_ManagedBy");
 
-                    b.Navigation("Subject");
-
-                    b.Navigation("User");
+                    b.Navigation("ManagedByUser");
                 });
 
             modelBuilder.Entity("Domain.Models.TestSet", b =>
@@ -882,8 +861,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Chapters");
 
                     b.Navigation("ChatSessions");
-
-                    b.Navigation("SubjectTeachers");
 
                     b.Navigation("TestSets");
                 });

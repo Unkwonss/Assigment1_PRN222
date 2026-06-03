@@ -12,6 +12,11 @@ namespace BusinessLayer.Interfaces
         Task<SubjectDto> CreateSubjectAsync(SubjectDto subjectDto);
         Task UpdateSubjectAsync(SubjectDto subjectDto);
         Task DeleteSubjectAsync(int id);
+        Task<bool> IsUserAssignedToSubjectAsync(int userId, int subjectId);
+        Task<bool> IsUserSubjectHeadAsync(int userId, int subjectId);
+        Task<bool> IsUserSubjectHeadForChapterAsync(int userId, int chapterId);
+        Task AssignTeachersToSubjectAsync(int subjectId, List<int> teacherIds, int? headTeacherId);
+        Task<IEnumerable<UserDto>> GetTeachersBySubjectIdAsync(int subjectId);
 
         // Chapters
         Task<IEnumerable<ChapterDto>> GetChaptersBySubjectIdAsync(int subjectId);

@@ -49,6 +49,11 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Admin" && ViewContext.RouteData.Values["action"]?.ToString() == "ManageStudents" ? "active" : "")" asp-controller="Admin" asp-action="ManageStudents">
+                                        <i class="bi bi-mortarboard-fill"></i> Quản lý sinh viên
+                                    </a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Document" ? "active" : "")" asp-controller="Document" asp-action="Index">
                                         <i class="bi bi-folder-fill"></i> Tài liệu
                                     </a>
@@ -96,15 +101,15 @@
                     <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
                         @if (User.Identity?.IsAuthenticated == true)
                         {
-                            <div class="user-profile-nav d-none d-sm-flex align-items-center gap-2">
+                            <a asp-controller="Profile" asp-action="Index" class="user-profile-nav d-none d-sm-flex align-items-center gap-2 text-decoration-none">
                                 <div class="avatar-glow">
                                     <span class="avatar-text">@User.Identity.Name?[0].ToString().ToUpper()</span>
                                 </div>
                                 <div class="profile-details text-start">
-                                    <div class="profile-name">@User.Identity.Name</div>
-                                    <div class="profile-role">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</div>
+                                    <div class="profile-name text-white">@User.Identity.Name</div>
+                                    <div class="profile-role text-muted-custom">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</div>
                                 </div>
-                            </div>
+                            </a>
                             
                             <a class="btn btn-logout d-flex align-items-center gap-2" asp-controller="Account" asp-action="Logout">
                                 <i class="bi bi-box-arrow-right"></i> <span>Đăng xuất</span>

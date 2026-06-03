@@ -19,6 +19,7 @@ namespace BusinessLayer.Services
     public class DocumentService : IDocumentService
     {
         private readonly IGenericRepository<Subject> _subjectRepo;
+        private readonly IGenericRepository<SubjectTeacher> _subjectTeacherRepo;
         private readonly IGenericRepository<Chapter> _chapterRepo;
         private readonly IGenericRepository<Document> _documentRepo;
         private readonly IGenericRepository<DocumentIndex> _indexRepo;
@@ -34,6 +35,7 @@ namespace BusinessLayer.Services
 
         public DocumentService(
             IGenericRepository<Subject> subjectRepo,
+            IGenericRepository<SubjectTeacher> subjectTeacherRepo,
             IGenericRepository<Chapter> chapterRepo,
             IGenericRepository<Document> documentRepo,
             IGenericRepository<DocumentIndex> indexRepo,
@@ -48,6 +50,7 @@ namespace BusinessLayer.Services
             ILogger<DocumentService> logger)
         {
             _subjectRepo      = subjectRepo;
+            _subjectTeacherRepo = subjectTeacherRepo;
             _chapterRepo      = chapterRepo;
             _documentRepo     = documentRepo;
             _indexRepo        = indexRepo;
@@ -66,11 +69,24 @@ namespace BusinessLayer.Services
         private SubjectDto? MapSubjectToDto(Subject? subject)
         {
             if (subject == null) return null;
+            
+            var headTeacher = subject.SubjectTeachers?.FirstOrDefault(st => st.IsSubjectHead);
+            
             return new SubjectDto
             {
                 SubjectId = subject.SubjectId,
                 SubjectCode = subject.SubjectCode,
                 SubjectName = subject.SubjectName,
+                ManagedByUserId = headTeacher?.UserId,
+                ManagedByUserName = headTeacher?.User?.FullName,
+                AssignedTeacherIds = subject.SubjectTeachers?.Select(st => st.UserId).ToList() ?? new List<int>(),
+                AssignedTeachers = subject.SubjectTeachers?.Select(st => new UserDto
+                {
+                    UserId = st.UserId,
+                    FullName = st.User?.FullName ?? "",
+                    Email = st.User?.Email ?? "",
+                    Role = st.User?.Role ?? ""
+                }).ToList() ?? new List<UserDto>(),
                 Chapters = subject.Chapters != null ? subject.Chapters.Select(c => new ChapterDto
                 {
                     ChapterId = c.ChapterId,
@@ -295,13 +311,19 @@ namespace BusinessLayer.Services
         #region Subjects
         public async Task<IEnumerable<SubjectDto>> GetAllSubjectsAsync()
         {
-            var subjects = await _subjectRepo.GetAllAsync(orderBy: q => q.OrderBy(s => s.SubjectCode));
+            var subjects = await _subjectRepo.GetAllAsync(
+                orderBy: q => q.OrderBy(s => s.SubjectCode),
+                includeProperties: "SubjectTeachers.User"
+            );
             return subjects.Select(s => MapSubjectToDto(s)!).ToList();
         }
 
         public async Task<SubjectDto?> GetSubjectByIdAsync(int id)
         {
-            var subject = await _subjectRepo.GetByIdAsync(id);
+            var subject = await _subjectRepo.GetFirstOrDefaultAsync(
+                filter: s => s.SubjectId == id,
+                includeProperties: "SubjectTeachers.User"
+            );
             return MapSubjectToDto(subject);
         }
 
@@ -329,6 +351,72 @@ namespace BusinessLayer.Services
         {
             await _subjectRepo.DeleteByIdAsync(id);
             await _subjectRepo.SaveAsync();
+        }
+
+        public async Task<bool> IsUserAssignedToSubjectAsync(int userId, int subjectId)
+        {
+            var relation = await _subjectTeacherRepo.GetFirstOrDefaultAsync(
+                st => st.SubjectId == subjectId && st.UserId == userId
+            );
+            return relation != null;
+        }
+
+        public async Task<bool> IsUserSubjectHeadAsync(int userId, int subjectId)
+        {
+            var relation = await _subjectTeacherRepo.GetFirstOrDefaultAsync(
+                st => st.SubjectId == subjectId && st.UserId == userId
+            );
+            return relation != null && relation.IsSubjectHead;
+        }
+
+        public async Task<bool> IsUserSubjectHeadForChapterAsync(int userId, int chapterId)
+        {
+            var chapter = await _chapterRepo.GetByIdAsync(chapterId);
+            if (chapter == null) return false;
+            return await IsUserSubjectHeadAsync(userId, chapter.SubjectId);
+        }
+
+        public async Task AssignTeachersToSubjectAsync(int subjectId, List<int> teacherIds, int? headTeacherId)
+        {
+            // Delete old relations
+            var existing = await _subjectTeacherRepo.GetAllAsync(st => st.SubjectId == subjectId);
+            foreach (var rel in existing)
+            {
+                _subjectTeacherRepo.Delete(rel);
+            }
+            await _subjectTeacherRepo.SaveAsync();
+
+            // Add new relations
+            if (teacherIds != null)
+            {
+                foreach (var tId in teacherIds.Distinct())
+                {
+                    var isHead = (tId == headTeacherId);
+                    var rel = new SubjectTeacher
+                    {
+                        SubjectId = subjectId,
+                        UserId = tId,
+                        IsSubjectHead = isHead
+                    };
+                    await _subjectTeacherRepo.AddAsync(rel);
+                }
+                await _subjectTeacherRepo.SaveAsync();
+            }
+        }
+
+        public async Task<IEnumerable<UserDto>> GetTeachersBySubjectIdAsync(int subjectId)
+        {
+            var relations = await _subjectTeacherRepo.GetAllAsync(
+                filter: st => st.SubjectId == subjectId,
+                includeProperties: "User"
+            );
+            return relations.Select(st => new UserDto
+            {
+                UserId = st.User.UserId,
+                FullName = st.User.FullName,
+                Email = st.User.Email,
+                Role = st.User.Role
+            }).ToList();
         }
         #endregion
 

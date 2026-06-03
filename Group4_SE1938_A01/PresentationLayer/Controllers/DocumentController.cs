@@ -18,23 +18,52 @@ namespace PresentationLayer.Controllers
     public class DocumentController : Controller
     {
         private readonly IDocumentService _documentService;
+        private readonly IUserService _userService;
         private readonly ILogger<DocumentController> _logger;
 
-        public DocumentController(IDocumentService documentService, ILogger<DocumentController> logger)
+        public DocumentController(IDocumentService documentService, IUserService userService, ILogger<DocumentController> logger)
         {
             _documentService = documentService;
+            _userService = userService;
             _logger = logger;
         }
 
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var subjects = await _documentService.GetAllSubjectsAsync();
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            IEnumerable<SubjectDto> subjects;
+            if (role == "Admin")
+            {
+                subjects = await _documentService.GetAllSubjectsAsync();
+            }
+            else // Teacher
+            {
+                int.TryParse(userIdString, out int userId);
+                var allSubjects = await _documentService.GetAllSubjectsAsync();
+                var assignedSubjects = new List<SubjectDto>();
+                foreach (var s in allSubjects)
+                {
+                    if (await _documentService.IsUserAssignedToSubjectAsync(userId, s.SubjectId))
+                    {
+                        assignedSubjects.Add(s);
+                    }
+                }
+                subjects = assignedSubjects;
+            }
+
             var strategies = await _documentService.GetAllChunkingStrategiesAsync();
             var models = await _documentService.GetAllEmbeddingModelsAsync();
+            
+            // Get all teachers for Subject assignment
+            var allUsers = await _userService.GetAllUsersAsync();
+            var teachers = allUsers.Where(u => u.Role == "Teacher").ToList();
 
             ViewBag.Strategies = strategies;
             ViewBag.EmbeddingModels = models;
+            ViewBag.Teachers = teachers;
 
             return View(subjects);
         }
@@ -43,7 +72,7 @@ namespace PresentationLayer.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateSubject(string subjectCode, string subjectName)
+        public async Task<IActionResult> CreateSubject(string subjectCode, string subjectName, int? managedByUserId, List<int> teacherIds)
         {
             if (string.IsNullOrEmpty(subjectCode) || string.IsNullOrEmpty(subjectName))
             {
@@ -51,15 +80,28 @@ namespace PresentationLayer.Controllers
                 return RedirectToAction("Index");
             }
 
-            var subject = new SubjectDto { SubjectCode = subjectCode, SubjectName = subjectName };
-            await _documentService.CreateSubjectAsync(subject);
+            var subject = new SubjectDto 
+            { 
+                SubjectCode = subjectCode, 
+                SubjectName = subjectName
+            };
+            var created = await _documentService.CreateSubjectAsync(subject);
+            
+            // Assign teachers and subject head
+            var allIds = teacherIds ?? new List<int>();
+            if (managedByUserId.HasValue && !allIds.Contains(managedByUserId.Value))
+            {
+                allIds.Add(managedByUserId.Value);
+            }
+            await _documentService.AssignTeachersToSubjectAsync(created.SubjectId, allIds, managedByUserId);
+
             TempData["Success"] = "Thêm môn học thành công!";
             return RedirectToAction("Index");
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditSubject(int subjectId, string subjectCode, string subjectName)
+        public async Task<IActionResult> EditSubject(int subjectId, string subjectCode, string subjectName, int? managedByUserId, List<int> teacherIds)
         {
             if (string.IsNullOrEmpty(subjectCode) || string.IsNullOrEmpty(subjectName))
             {
@@ -67,8 +109,22 @@ namespace PresentationLayer.Controllers
                 return RedirectToAction("Index");
             }
 
-            var subject = new SubjectDto { SubjectId = subjectId, SubjectCode = subjectCode, SubjectName = subjectName };
+            var subject = new SubjectDto 
+            { 
+                SubjectId = subjectId, 
+                SubjectCode = subjectCode, 
+                SubjectName = subjectName
+            };
             await _documentService.UpdateSubjectAsync(subject);
+
+            // Assign teachers and subject head
+            var allIds = teacherIds ?? new List<int>();
+            if (managedByUserId.HasValue && !allIds.Contains(managedByUserId.Value))
+            {
+                allIds.Add(managedByUserId.Value);
+            }
+            await _documentService.AssignTeachersToSubjectAsync(subjectId, allIds, managedByUserId);
+
             TempData["Success"] = "Cập nhật môn học thành công!";
             return RedirectToAction("Index");
         }
@@ -99,10 +155,62 @@ namespace PresentationLayer.Controllers
             return Json(chapters.Select(c => new { c.ChapterId, c.ChapterNumber, c.ChapterName }));
         }
 
+        private async Task<(bool Success, string Message, int UserId)> CheckPermissionForSubjectAsync(int subjectId)
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (role == "Admin")
+            {
+                return (false, "Từ chối truy cập: Admin không được phép tạo chương hay tải lên tài liệu.", 0);
+            }
+
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId))
+            {
+                return (false, "Không thể xác định thông tin tài khoản đăng nhập.", 0);
+            }
+
+            bool isHead = await _documentService.IsUserSubjectHeadAsync(userId, subjectId);
+            if (!isHead)
+            {
+                return (false, "Từ chối truy cập: Chỉ Trưởng bộ môn của môn học này mới được phép thao tác.", userId);
+            }
+
+            return (true, string.Empty, userId);
+        }
+
+        private async Task<(bool Success, string Message, int UserId)> CheckPermissionForChapterAsync(int chapterId)
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (role == "Admin")
+            {
+                return (false, "Từ chối truy cập: Admin không được phép tạo chương hay tải lên tài liệu.", 0);
+            }
+
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId))
+            {
+                return (false, "Không thể xác định thông tin tài khoản đăng nhập.", 0);
+            }
+
+            bool isHead = await _documentService.IsUserSubjectHeadForChapterAsync(userId, chapterId);
+            if (!isHead)
+            {
+                return (false, "Từ chối truy cập: Chỉ Trưởng bộ môn của môn học này mới được phép thao tác.", userId);
+            }
+
+            return (true, string.Empty, userId);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateChapter(int subjectId, int chapterNumber, string chapterName)
         {
+            var auth = await CheckPermissionForSubjectAsync(subjectId);
+            if (!auth.Success)
+            {
+                return Json(new { success = false, message = auth.Message });
+            }
+
             if (string.IsNullOrEmpty(chapterName) || chapterNumber <= 0)
             {
                 return Json(new { success = false, message = "Thông tin chương không hợp lệ." });
@@ -117,6 +225,12 @@ namespace PresentationLayer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditChapter(int chapterId, int chapterNumber, string chapterName)
         {
+            var auth = await CheckPermissionForChapterAsync(chapterId);
+            if (!auth.Success)
+            {
+                return Json(new { success = false, message = auth.Message });
+            }
+
             if (string.IsNullOrEmpty(chapterName) || chapterNumber <= 0)
             {
                 return Json(new { success = false, message = "Thông tin chỉnh sửa không hợp lệ." });
@@ -135,6 +249,12 @@ namespace PresentationLayer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteChapter(int chapterId)
         {
+            var auth = await CheckPermissionForChapterAsync(chapterId);
+            if (!auth.Success)
+            {
+                return Json(new { success = false, message = auth.Message });
+            }
+
             try
             {
                 await _documentService.DeleteChapterAsync(chapterId);
@@ -178,6 +298,14 @@ namespace PresentationLayer.Controllers
         {
             _logger.LogInformation("UploadDocument called. ChapterId={ChapterId}, Title={Title}, FileName={FileName}, FileSize={FileSize}",
                 chapterId, title, file?.FileName, file?.Length);
+
+            var auth = await CheckPermissionForChapterAsync(chapterId);
+            if (!auth.Success)
+            {
+                return Json(new { success = false, message = auth.Message });
+            }
+            int userId = auth.UserId;
+
             if (file == null || file.Length == 0 || string.IsNullOrEmpty(title))
             {
                 return Json(new { success = false, message = "Vui lòng nhập tiêu đề và chọn tệp hợp lệ." });
@@ -214,12 +342,6 @@ namespace PresentationLayer.Controllers
             {
                 // Simulate robust text extraction based on curriculum context
                 textContent = GenerateCurriculumSimulationText(title);
-            }
-
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId) || userId < 0)
-            {
-                return Json(new { success = false, message = "Không xác định được tài khoản đăng nhập. Vui lòng đăng nhập lại." });
             }
 
             var doc = new DocumentDto
@@ -339,6 +461,18 @@ namespace PresentationLayer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteDocument(int documentId)
         {
+            var document = await _documentService.GetDocumentByIdAsync(documentId);
+            if (document == null)
+            {
+                return Json(new { success = false, message = "Tài liệu không tồn tại." });
+            }
+
+            var auth = await CheckPermissionForChapterAsync(document.ChapterId);
+            if (!auth.Success)
+            {
+                return Json(new { success = false, message = auth.Message });
+            }
+
             try
             {
                 await _documentService.DeleteDocumentAsync(documentId);

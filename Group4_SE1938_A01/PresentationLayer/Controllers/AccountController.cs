@@ -74,6 +74,12 @@ namespace PresentationLayer.Controllers
                 authProperties
             );
 
+            if (user.Role == "Student" && await _userService.IsDefaultPasswordAsync(user.UserId))
+            {
+                TempData["Warning"] = "Bạn đang sử dụng mật khẩu mặc định. Vui lòng đổi mật khẩu để tiếp tục.";
+                return RedirectToAction("Index", "Profile");
+            }
+
             return RedirectByUserRole();
         }
 
@@ -199,6 +205,12 @@ namespace PresentationLayer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateUser(CreateUserViewModel model)
         {
+            if (model.Role != "Student" && string.IsNullOrWhiteSpace(model.Password))
+            {
+                TempData["Error"] = "Mật khẩu là bắt buộc đối với Giáo viên hoặc Admin.";
+                return RedirectToAction("Users");
+            }
+
             if (!ModelState.IsValid)
             {
                 TempData["Error"] = string.Join(" | ", ModelState.Values
@@ -207,10 +219,16 @@ namespace PresentationLayer.Controllers
                 return RedirectToAction("Users");
             }
 
+            string password = model.Password ?? string.Empty;
+            if (model.Role == "Student" && string.IsNullOrWhiteSpace(password))
+            {
+                password = "FptStudent@123";
+            }
+
             var user = new UserDto
             {
                 Username     = model.Username.Trim(),
-                PasswordHash = model.Password,
+                PasswordHash = password,
                 FullName     = model.FullName.Trim(),
                 Email        = model.Email.Trim().ToLower(),
                 Role         = model.Role

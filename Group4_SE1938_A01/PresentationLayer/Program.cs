@@ -49,6 +49,7 @@ namespace PresentationLayer
 
             // Register Services
             builder.Services.AddSingleton<SimulatedAIEngine>();
+            builder.Services.AddScoped<EmailService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IDocumentService, DocumentService>();
             builder.Services.AddScoped<IChatService, ChatService>();

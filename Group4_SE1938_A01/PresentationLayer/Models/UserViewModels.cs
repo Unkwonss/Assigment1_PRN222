@@ -26,11 +26,10 @@ namespace PresentationLayer.Models
         [MaxLength(100, ErrorMessage = "Email không được vượt quá 100 ký tự")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Mật khẩu là bắt buộc")]
         [DataType(DataType.Password)]
         [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự")]
         [MaxLength(100, ErrorMessage = "Mật khẩu không được vượt quá 100 ký tự")]
-        public string Password { get; set; } = string.Empty;
+        public string? Password { get; set; }
 
         [Required(ErrorMessage = "Vai trò là bắt buộc")]
         [Display(Name = "Vai trò")]

@@ -41,6 +41,8 @@ public partial class Prn222AssigmentContext : DbContext
 
     public virtual DbSet<Subject> Subjects { get; set; }
 
+    public virtual DbSet<SubjectTeacher> SubjectTeachers { get; set; }
+
     public virtual DbSet<TestSet> TestSets { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
@@ -276,6 +278,25 @@ public partial class Prn222AssigmentContext : DbContext
 
             entity.Property(e => e.SubjectCode).HasMaxLength(20);
             entity.Property(e => e.SubjectName).HasMaxLength(150);
+        });
+
+        modelBuilder.Entity<SubjectTeacher>(entity =>
+        {
+            entity.HasKey(e => new { e.SubjectId, e.UserId }).HasName("PK_SubjectTeachers");
+
+            entity.ToTable("SubjectTeachers");
+
+            entity.HasOne(d => d.Subject)
+                .WithMany(p => p.SubjectTeachers)
+                .HasForeignKey(d => d.SubjectId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_SubjectTeachers_Subjects");
+
+            entity.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_SubjectTeachers_Users");
         });
 
         modelBuilder.Entity<TestSet>(entity =>

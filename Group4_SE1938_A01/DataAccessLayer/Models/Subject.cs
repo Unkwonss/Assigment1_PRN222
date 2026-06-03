@@ -11,6 +11,8 @@ public partial class Subject
 
     public string SubjectName { get; set; } = null!;
 
+    public virtual ICollection<SubjectTeacher> SubjectTeachers { get; set; } = new List<SubjectTeacher>();
+
     public virtual ICollection<Chapter> Chapters { get; set; } = new List<Chapter>();
 
     public virtual ICollection<ChatSession> ChatSessions { get; set; } = new List<ChatSession>();

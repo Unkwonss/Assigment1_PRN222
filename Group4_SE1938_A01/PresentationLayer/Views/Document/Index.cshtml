@@ -50,30 +50,44 @@
             <div class="card-glass h-100 p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold text-glow mb-0"><i class="bi bi-journal-bookmark-fill"></i> Danh sách môn học</h5>
-                    <button class="btn btn-sm btn-glow-primary py-1 px-2" data-bs-toggle="modal" data-bs-target="#createSubjectModal">
-                        <i class="bi bi-plus-lg"></i> Thêm
-                    </button>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <button class="btn btn-sm btn-glow-primary py-1 px-2" data-bs-toggle="modal" data-bs-target="#createSubjectModal">
+                            <i class="bi bi-plus-lg"></i> Thêm
+                        </button>
+                    }
                 </div>
                 
                 <div class="list-group list-group-flush gap-2" id="subjectList">
                     @foreach (var sub in Model)
                     {
-                        <div class="session-item d-flex align-items-center justify-content-between subject-item" data-id="@sub.SubjectId" data-code="@sub.SubjectCode" data-name="@sub.SubjectName" onclick="selectSubject(@sub.SubjectId, this)">
+                        <div class="session-item d-flex align-items-center justify-content-between subject-item" data-id="@sub.SubjectId" data-code="@sub.SubjectCode" data-name="@sub.SubjectName" data-managed-by="@(sub.ManagedByUserId?.ToString() ?? "")" data-assigned-teachers="@string.Join(",", sub.AssignedTeacherIds)" onclick="selectSubject(@sub.SubjectId, this)">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="bi bi-journal-code text-glow"></i>
                                 <div>
                                     <span class="fw-bold text-white">@sub.SubjectCode</span>
                                     <div class="small text-muted-custom">@sub.SubjectName</div>
+                                    @if (sub.ManagedByUserId != null)
+                                    {
+                                        <div class="small text-glow" style="font-size: 0.75rem; color: #818cf8;"><i class="bi bi-person-badge"></i> Trưởng môn: @sub.ManagedByUserName</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="small text-warning" style="font-size: 0.75rem;"><i class="bi bi-person-badge-fill"></i> Chưa gán Trưởng môn</div>
+                                    }
                                 </div>
                             </div>
-                            <div class="d-inline-flex gap-1 action-buttons">
-                                <button class="btn btn-link text-glow p-1 btn-edit-sub" onclick="event.stopPropagation(); openEditSubjectModal(@sub.SubjectId, '@sub.SubjectCode', '@sub.SubjectName')">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
-                                <button class="btn btn-link text-danger p-1 btn-delete-sub" onclick="event.stopPropagation(); confirmDeleteSubject(@sub.SubjectId, '@sub.SubjectCode')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <div class="d-inline-flex gap-1 action-buttons">
+                                    <button class="btn btn-link text-glow p-1 btn-edit-sub" onclick="event.stopPropagation(); openEditSubjectModal(@sub.SubjectId, '@sub.SubjectCode', '@sub.SubjectName', '@sub.ManagedByUserId', '@string.Join(",", sub.AssignedTeacherIds)')">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn btn-link text-danger p-1 btn-delete-sub" onclick="event.stopPropagation(); confirmDeleteSubject(@sub.SubjectId, '@sub.SubjectCode')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            }
                         </div>
                     }
                 </div>
@@ -167,6 +181,43 @@
                         <label class="form-label text-muted-custom">Tên môn học (Subject Name)</label>
                         <input type="text" name="subjectName" class="form-control form-glass" placeholder="ví dụ: Lập trình Web MVC .NET" required />
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Trưởng bộ môn (Subject Head - Có quyền upload)</label>
+                        <select name="managedByUserId" class="form-select form-glass">
+                            <option value="">-- Chưa gán trưởng môn --</option>
+                            @if (ViewBag.Teachers != null)
+                            {
+                                foreach (var teacher in (IEnumerable<BusinessLayer.DTOs.UserDto>)ViewBag.Teachers)
+                                {
+                                    <option value="@teacher.UserId">@teacher.FullName (@teacher.Email)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Giảng viên tham gia giảng dạy (Chọn nhiều)</label>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-glass w-100 text-start dropdown-toggle d-flex justify-content-between align-items-center form-glass" type="button" id="createSubTeachersDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" style="color: #94a3b8;">
+                                <span id="createSubTeachersLabel">-- Chọn giảng viên --</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark p-3 w-100 form-glass" aria-labelledby="createSubTeachersDropdown" style="max-height: 200px; overflow-y: auto; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(255,255,255,0.1);">
+                                @if (ViewBag.Teachers != null)
+                                {
+                                    foreach (var teacher in (IEnumerable<BusinessLayer.DTOs.UserDto>)ViewBag.Teachers)
+                                    {
+                                        <li class="mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input create-teacher-checkbox" type="checkbox" name="teacherIds" value="@teacher.UserId" id="create_teacher_@teacher.UserId" onchange="updateCreateTeachersLabel()">
+                                                <label class="form-check-label text-white small" for="create_teacher_@teacher.UserId">
+                                                    @teacher.FullName (@teacher.Email)
+                                                </label>
+                                            </div>
+                                        </li>
+                                    }
+                                }
+                            </ul>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer modal-footer-glass">
                     <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
@@ -196,6 +247,43 @@
                     <div class="mb-3">
                         <label class="form-label text-muted-custom">Tên môn học (Subject Name)</label>
                         <input type="text" name="subjectName" id="editSubName" class="form-control form-glass" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Trưởng bộ môn (Subject Head - Có quyền upload)</label>
+                        <select name="managedByUserId" id="editSubTeacher" class="form-select form-glass">
+                            <option value="">-- Chưa gán trưởng môn --</option>
+                            @if (ViewBag.Teachers != null)
+                            {
+                                foreach (var teacher in (IEnumerable<BusinessLayer.DTOs.UserDto>)ViewBag.Teachers)
+                                {
+                                    <option value="@teacher.UserId">@teacher.FullName (@teacher.Email)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Giảng viên tham gia giảng dạy (Chọn nhiều)</label>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-glass w-100 text-start dropdown-toggle d-flex justify-content-between align-items-center form-glass" type="button" id="editSubTeachersDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" style="color: #94a3b8;">
+                                <span id="editSubTeachersLabel">-- Chọn giảng viên --</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark p-3 w-100 form-glass" aria-labelledby="editSubTeachersDropdown" style="max-height: 200px; overflow-y: auto; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(255,255,255,0.1);">
+                                @if (ViewBag.Teachers != null)
+                                {
+                                    foreach (var teacher in (IEnumerable<BusinessLayer.DTOs.UserDto>)ViewBag.Teachers)
+                                    {
+                                        <li class="mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input edit-teacher-checkbox" type="checkbox" name="teacherIds" value="@teacher.UserId" id="edit_teacher_@teacher.UserId" onchange="updateEditTeachersLabel()">
+                                                <label class="form-check-label text-white small" for="edit_teacher_@teacher.UserId">
+                                                    @teacher.FullName (@teacher.Email)
+                                                </label>
+                                            </div>
+                                        </li>
+                                    }
+                                }
+                            </ul>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer modal-footer-glass">
@@ -366,10 +454,19 @@
         var selectedSubjectId = 0;
         var selectedChapterId = 0;
 
+        // Current user identity for dynamic authorization
+        var currentUserId = @(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var currentUserRole = "@(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "")";
+        var isManager = false; // Will be computed on subject selection
+
         // --- 1. Subject Management ---
         function selectSubject(id, elem) {
             selectedSubjectId = id;
             selectedChapterId = 0;
+            
+            // Check if current user is the assigned teacher for this subject
+            var managedBy = $(elem).data("managed-by");
+            isManager = (currentUserRole === "Teacher" && Number(managedBy) === currentUserId);
             
             // Highlight selected
             $(".subject-item").removeClass("active");
@@ -382,8 +479,15 @@
             $("#docPlaceholder").removeClass("d-none").html('<i class="bi bi-file-earmark-zip fs-1 mb-2 d-block"></i>Vui lòng chọn chương học ở cột giữa');
             $("#documentList").addClass("d-none").empty();
             $("#btnUploadDoc").addClass("d-none");
-            $("#btnReIndexAll").removeClass("d-none");
-            $("#btnAddChapter").removeClass("d-none");
+            
+            // Hide or show operations based on ownership
+            if (isManager) {
+                $("#btnReIndexAll").removeClass("d-none");
+                $("#btnAddChapter").removeClass("d-none");
+            } else {
+                $("#btnReIndexAll").addClass("d-none");
+                $("#btnAddChapter").addClass("d-none");
+            }
 
             // Fetch Chapters via AJAX
             $.get("/Document/GetChapters?subjectId=" + id, function (data) {
@@ -397,12 +501,9 @@
 
                 var html = "";
                 data.forEach(function (chap) {
-                    html += `
-                        <div class="session-item d-flex align-items-center justify-content-between chapter-item" data-id="${chap.chapterId}" onclick="selectChapter(${chap.chapterId}, this)">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-secondary bg-opacity-25 text-glow border border-white border-opacity-10 px-2">Chương ${chap.chapterNumber}</span>
-                                <span class="fw-bold text-white">${chap.chapterName}</span>
-                            </div>
+                    var actionBtns = "";
+                    if (isManager) {
+                        actionBtns = `
                             <div class="d-inline-flex gap-1 action-buttons">
                                 <button class="btn btn-link text-glow p-1" onclick="event.stopPropagation(); openEditChapterModal(${chap.chapterId}, ${chap.chapterNumber}, '${chap.chapterName}')">
                                     <i class="bi bi-pencil-square"></i>
@@ -411,6 +512,15 @@
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
+                        `;
+                    }
+                    html += `
+                        <div class="session-item d-flex align-items-center justify-content-between chapter-item" data-id="${chap.chapterId}" onclick="selectChapter(${chap.chapterId}, this)">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary bg-opacity-25 text-glow border border-white border-opacity-10 px-2">Chương ${chap.chapterNumber}</span>
+                                <span class="fw-bold text-white">${chap.chapterName}</span>
+                            </div>
+                            ${actionBtns}
                         </div>
                     `;
                 });
@@ -418,10 +528,42 @@
             });
         }
 
-        function openEditSubjectModal(id, code, name) {
+        function updateCreateTeachersLabel() {
+            var checkedCount = $(".create-teacher-checkbox:checked").length;
+            if (checkedCount === 0) {
+                $("#createSubTeachersLabel").text("-- Chọn giảng viên --");
+            } else {
+                $("#createSubTeachersLabel").text("Đã chọn " + checkedCount + " giảng viên");
+            }
+        }
+
+        function updateEditTeachersLabel() {
+            var checkedCount = $(".edit-teacher-checkbox:checked").length;
+            if (checkedCount === 0) {
+                $("#editSubTeachersLabel").text("-- Chọn giảng viên --");
+            } else {
+                $("#editSubTeachersLabel").text("Đã chọn " + checkedCount + " giảng viên");
+            }
+        }
+
+        function openEditSubjectModal(id, code, name, teacherId, assignedTeacherIds) {
             $("#editSubId").val(id);
             $("#editSubCode").val(code);
             $("#editSubName").val(name);
+            $("#editSubTeacher").val(teacherId || "");
+
+            // Uncheck all edit checkboxes first
+            $(".edit-teacher-checkbox").prop("checked", false);
+
+            // Tick checkboxes based on assignedTeacherIds
+            if (assignedTeacherIds) {
+                var ids = assignedTeacherIds.split(",");
+                ids.forEach(function(tId) {
+                    $("#edit_teacher_" + tId).prop("checked", true);
+                });
+            }
+            updateEditTeachersLabel();
+
             var modal = new bootstrap.Modal(document.getElementById('editSubjectModal'));
             modal.show();
         }
@@ -552,8 +694,14 @@
             // Reset placeholders
             $("#docPlaceholder").removeClass("d-none").html('<div class="spinner-border text-glow mb-2" role="status"></div><div class="text-muted-custom">Đang tải các tài liệu...</div>');
             $("#documentList").addClass("d-none").empty();
-            $("#btnUploadDoc").removeClass("d-none");
-            $("#btnReIndexAll").removeClass("d-none");
+
+            if (isManager) {
+                $("#btnUploadDoc").removeClass("d-none");
+                $("#btnReIndexAll").removeClass("d-none");
+            } else {
+                $("#btnUploadDoc").addClass("d-none");
+                $("#btnReIndexAll").addClass("d-none");
+            }
 
             // Fetch Documents
             $.get("/Document/GetDocuments?chapterId=" + id, function (data) {
@@ -582,6 +730,19 @@
                             embedBadge = `<span class="badge bg-danger bg-opacity-25 border border-white border-opacity-10">⚠️ Chưa có vector</span>`;
                     }
 
+                    // Assigned teacher can Index and Delete documents
+                    var docActionBtns = "";
+                    if (isManager) {
+                        docActionBtns = `
+                            <button class="btn btn-sm btn-outline-glass py-1 px-2 d-flex align-items-center gap-1" onclick="openIndexModal(${doc.documentId})" style="font-size:0.75rem;">
+                                <i class="bi bi-cpu-fill text-glow"></i> Index
+                            </button>
+                            <button class="btn btn-sm btn-logout py-1 px-2 d-flex align-items-center gap-1" onclick="confirmDeleteDoc(${doc.documentId})" style="font-size:0.75rem;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        `;
+                    }
+
                     html += `
                         <div class="card-glass p-3 mb-2" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
                             <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
@@ -599,16 +760,11 @@
                             </div>
                             
                             <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-white border-opacity-10">
-                                <span class="small text-muted-custom" style="font-size:0.7rem;"><i class="bi bi-person-circle"></i> ${doc.uploadedBy}</span>
+                                <span class="small text-muted-custom" style="font-size:0.7rem;"><i class="bi bi-person-circle"></i> Người tải: ${doc.uploadedBy}</span>
                                 <div class="d-inline-flex gap-1">
-                                    <button class="btn btn-sm btn-outline-glass py-1 px-2 d-flex align-items-center gap-1" onclick="openIndexModal(${doc.documentId})" style="font-size:0.75rem;">
-                                        <i class="bi bi-cpu-fill text-glow"></i> Index
-                                    </button>
+                                    ${docActionBtns}
                                     <button class="btn btn-sm btn-outline-glass py-1 px-2 d-flex align-items-center gap-1" onclick="openViewChunksModal(${doc.documentId})" style="font-size:0.75rem;">
                                         <i class="bi bi-eye-fill"></i> Xem
-                                    </button>
-                                    <button class="btn btn-sm btn-logout py-1 px-2 d-flex align-items-center gap-1" onclick="confirmDeleteDoc(${doc.documentId})" style="font-size:0.75rem;">
-                                        <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
                             </div>

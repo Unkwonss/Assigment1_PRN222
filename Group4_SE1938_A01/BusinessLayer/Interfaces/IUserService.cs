@@ -14,5 +14,9 @@ namespace BusinessLayer.Interfaces
         Task<UserDto> CreateUserAsync(UserDto userDto);
         Task UpdateUserAsync(UserDto userDto);
         Task DeleteUserAsync(int userId);
+        Task<UserDto?> CreateStudentAccountAsync(string fullName, string email);
+        Task<int> ImportStudentsFromCsvAsync(System.IO.Stream fileStream);
+        Task<bool> ChangePasswordAsync(int userId, string oldPassword, string newPassword);
+        Task<bool> IsDefaultPasswordAsync(int userId);
     }
 }
