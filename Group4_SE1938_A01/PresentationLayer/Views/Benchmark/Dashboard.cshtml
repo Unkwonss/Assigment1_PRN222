@@ -1,0 +1,228 @@
+@model List<PresentationLayer.Models.BenchmarkResultViewModel>
+
+@{
+    ViewData["Title"] = "Benchmark Dashboard";
+    
+    // Find highest MRR for highlighting
+    double maxMrr = Model.Any() ? Model.Max(x => x.MRR) : 0;
+    
+    // Collect unique chunk strategies for filter
+    var strategies = Model.Select(x => x.ChunkStrategy)
+                          .Where(x => !string.IsNullOrEmpty(x))
+                          .Distinct()
+                          .ToList();
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="bi bi-graph-up text-primary"></i> Đánh giá So sánh RAG Models</h2>
+
+    <!-- Filter & Export Controls -->
+    <div class="row mb-4 align-items-end">
+        <div class="col-md-4">
+            <label for="strategyFilter" class="form-label fw-bold">Lọc theo Chunking Strategy:</label>
+            <select id="strategyFilter" class="form-select">
+                <option value="">-- Tất cả Strategy --</option>
+                @foreach(var s in strategies)
+                {
+                    <option value="@s">@s</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-8 text-end">
+            <button class="btn btn-success" onclick="exportTableToCSV('benchmark_results.csv')">
+                <i class="bi bi-file-earmark-excel"></i> Xuất CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-5">
+        <div class="col-md-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                    <h5 class="card-title fw-bold">Biểu đồ so sánh Precision@3 & Recall@3</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="metricsChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Section -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0" id="resultsTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Model</th>
+                            <th>Chunk Strategy</th>
+                            <th>Precision@3</th>
+                            <th>Recall@3</th>
+                            <th>MRR</th>
+                            <th>Avg Latency (ms)</th>
+                            <th>Thời gian test</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">Không có dữ liệu benchmark nào được tìm thấy.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var item in Model)
+                            {
+                                bool isBest = (item.MRR == maxMrr && maxMrr > 0);
+                                <tr class="data-row @(isBest ? "table-success fw-bold" : "")" data-strategy="@item.ChunkStrategy">
+                                    <td>@item.ModelName</td>
+                                    <td>@(string.IsNullOrEmpty(item.ChunkStrategy) ? "N/A" : item.ChunkStrategy)</td>
+                                    <td>@item.Precision3.ToString("0.000")</td>
+                                    <td>@item.Recall3.ToString("0.000")</td>
+                                    <td>
+                                        @item.MRR.ToString("0.000")
+                                        @if(isBest) { <span class="badge bg-danger ms-1">BEST</span> }
+                                    </td>
+                                    <td>@item.AvgLatencyMs.ToString("0.0")</td>
+                                    <td>@item.RunAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Prepare Data for Chart
+        const rawData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model));
+        
+        let chartInstance = null;
+
+        function renderChart(data) {
+            const ctx = document.getElementById('metricsChart').getContext('2d');
+            
+            // Group data by Model Name (taking averages if multiple strategies exist)
+            const grouped = {};
+            data.forEach(item => {
+                let label = item.ModelName;
+                if(item.ChunkStrategy) label += " (" + item.ChunkStrategy + ")";
+                
+                if (!grouped[label]) {
+                    grouped[label] = { p: 0, r: 0, count: 0 };
+                }
+                grouped[label].p += item.Precision3;
+                grouped[label].r += item.Recall3;
+                grouped[label].count++;
+            });
+
+            const labels = Object.keys(grouped);
+            const precisionData = labels.map(l => grouped[l].p / grouped[l].count);
+            const recallData = labels.map(l => grouped[l].r / grouped[l].count);
+
+            if(chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Precision@3',
+                            data: precisionData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Recall@3',
+                            data: recallData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1.0
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize Chart
+        renderChart(rawData);
+
+        // Filter Logic
+        document.getElementById('strategyFilter').addEventListener('change', function() {
+            const selected = this.value;
+            const rows = document.querySelectorAll('.data-row');
+            
+            const filteredData = [];
+            
+            rows.forEach(row => {
+                const strategy = row.getAttribute('data-strategy');
+                if (selected === "" || strategy === selected) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (selected === "") {
+                renderChart(rawData);
+            } else {
+                renderChart(rawData.filter(x => x.ChunkStrategy === selected));
+            }
+        });
+
+        // Export to CSV Logic
+        function exportTableToCSV(filename) {
+            const rows = document.querySelectorAll('#resultsTable tr');
+            let csv = [];
+            for (let i = 0; i < rows.length; i++) {
+                let row = [], cols = rows[i].querySelectorAll('td, th');
+                
+                // Only process visible rows
+                if (rows[i].style.display !== 'none') {
+                    for (let j = 0; j < cols.length; j++) {
+                        let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").trim();
+                        // Escape quotes
+                        data = data.replace(/"/g, '""');
+                        row.push('"' + data + '"');
+                    }
+                    csv.push(row.join(','));
+                }
+            }
+            
+            downloadCSV(csv.join('\n'), filename);
+        }
+
+        function downloadCSV(csv, filename) {
+            let csvFile = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            let downloadLink = document.createElement("a");
+            downloadLink.download = filename;
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    </script>
+}

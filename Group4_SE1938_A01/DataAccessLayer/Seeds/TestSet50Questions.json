@@ -1,0 +1,202 @@
+[
+  {
+    "Question": "Encapsulation trong OOP là gì và tại sao cần dùng?",
+    "GroundTruth": "Encapsulation là nguyên tắc đóng gói dữ liệu và phương thức liên quan vào một class, ẩn chi tiết implementation bên trong. Dùng access modifier (private, protected, public) để kiểm soát truy cập. Lợi ích: bảo vệ dữ liệu, dễ bảo trì, giảm coupling giữa các class."
+  },
+  {
+    "Question": "Inheritance trong C# hoạt động như thế nào?",
+    "GroundTruth": "Inheritance cho phép class con (derived) kế thừa thuộc tính và phương thức từ class cha (base). Dùng dấu ':' để kế thừa. C# chỉ hỗ trợ single inheritance cho class nhưng có thể implement nhiều interface. Từ khóa 'base' dùng để gọi constructor/method của class cha."
+  },
+  {
+    "Question": "Polymorphism trong C# có mấy loại và khác nhau thế nào?",
+    "GroundTruth": "C# có 2 loại polymorphism: Compile-time (method overloading - cùng tên khác tham số) và Runtime (method overriding - dùng virtual/override). Runtime polymorphism cho phép gọi đúng method của object thực tế dù đang dùng biến kiểu base class."
+  },
+  {
+    "Question": "Abstract class và Interface khác nhau như thế nào trong C#?",
+    "GroundTruth": "Abstract class có thể có implementation, constructor, field. Interface chỉ khai báo contract (từ C# 8 có default implementation). Class chỉ kế thừa 1 abstract class nhưng implement nhiều interface. Dùng abstract class khi có code chung; dùng interface khi cần define contract."
+  },
+  {
+    "Question": "Constructor trong C# là gì? Có mấy loại constructor?",
+    "GroundTruth": "Constructor là method đặc biệt chạy khi khởi tạo object, cùng tên với class. C# có: Default constructor (không tham số), Parameterized constructor, Copy constructor, Static constructor (chạy 1 lần khi class được load). Constructor có thể overload."
+  },
+  {
+    "Question": "Method overriding và method hiding khác nhau thế nào?",
+    "GroundTruth": "Overriding dùng virtual/override, quyết định method nào chạy dựa trên kiểu thực tế của object lúc runtime. Method hiding dùng 'new', quyết định method nào chạy dựa trên kiểu của biến lúc compile time. Overriding là runtime polymorphism, hiding là compile-time."
+  },
+  {
+    "Question": "Access modifier trong C# gồm những loại nào?",
+    "GroundTruth": "C# có 6 access modifier: public (truy cập mọi nơi), private (chỉ trong class), protected (class và derived), internal (trong assembly), protected internal (protected hoặc internal), private protected (protected và internal). Mặc định class là internal, member là private."
+  },
+  {
+    "Question": "Static class và instance class khác nhau thế nào?",
+    "GroundTruth": "Static class không thể khởi tạo object, tất cả member phải là static, không có constructor thông thường. Instance class tạo được nhiều object độc lập. Static class dùng cho utility/helper methods. Static member chia sẻ giá trị giữa tất cả instance."
+  },
+  {
+    "Question": "Sealed class trong C# dùng để làm gì?",
+    "GroundTruth": "Sealed class ngăn class khác kế thừa từ nó. Dùng keyword 'sealed'. Ví dụ: string là sealed class. Lợi ích: bảo mật implementation, tăng performance (compiler tối ưu được). Sealed method ngăn override trong derived class."
+  },
+  {
+    "Question": "Dependency Injection trong .NET là gì và tại sao dùng?",
+    "GroundTruth": "DI là design pattern inject dependency vào class thay vì class tự tạo. .NET có built-in DI container. Đăng ký service trong Program.cs (AddScoped/AddSingleton/AddTransient). Lợi ích: loose coupling, dễ test, dễ thay thế implementation."
+  },
+  {
+    "Question": "List<T> và Array khác nhau thế nào trong C#?",
+    "GroundTruth": "Array có kích thước cố định, khai báo với [], truy cập nhanh hơn. List<T> dynamic size, có nhiều method (Add, Remove, Contains...), linh hoạt hơn. List nội bộ dùng array và resize khi cần. Dùng Array khi biết trước kích thước; List khi cần thêm/xóa."
+  },
+  {
+    "Question": "Dictionary<TKey, TValue> trong C# hoạt động như thế nào?",
+    "GroundTruth": "Dictionary lưu cặp key-value, key phải unique. Truy cập O(1) qua key nhờ hash table. Có các method: Add, Remove, ContainsKey, TryGetValue. Không đảm bảo thứ tự. Throw KeyNotFoundException nếu key không tồn tại, dùng TryGetValue để an toàn hơn."
+  },
+  {
+    "Question": "LINQ là gì và cú pháp cơ bản của LINQ trong C#?",
+    "GroundTruth": "LINQ (Language Integrated Query) cho phép query dữ liệu trực tiếp trong C#. Có 2 cú pháp: Query syntax (from x in list where... select) và Method syntax (list.Where().Select()). Hỗ trợ IEnumerable, IQueryable. Lazy evaluation - chỉ thực thi khi enumerate."
+  },
+  {
+    "Question": "Sự khác nhau giữa IEnumerable và IQueryable trong LINQ?",
+    "GroundTruth": "IEnumerable xử lý in-memory, filter sau khi load hết data về. IQueryable dịch query thành SQL/expression tree, filter tại database. Dùng IQueryable với EF Core để tối ưu performance (chỉ fetch data cần thiết). AsEnumerable() chuyển từ IQueryable sang IEnumerable."
+  },
+  {
+    "Question": "GroupBy trong LINQ dùng như thế nào?",
+    "GroundTruth": "GroupBy nhóm các phần tử theo key. Trả về IEnumerable<IGrouping<TKey, TElement>>. Mỗi group có Key và danh sách phần tử. Ví dụ: students.GroupBy(s => s.Class) nhóm sinh viên theo lớp. Thường kết hợp với Count(), Sum(), Average() để tổng hợp."
+  },
+  {
+    "Question": "Deferred execution trong LINQ là gì?",
+    "GroundTruth": "Deferred execution nghĩa là LINQ query không thực thi ngay khi định nghĩa, chỉ thực thi khi enumerate (foreach, ToList, Count...). Lợi ích: compose query linh hoạt, tối ưu performance. Nhược điểm: có thể gây multiple enumeration. Dùng ToList() để force immediate execution."
+  },
+  {
+    "Question": "Queue và Stack trong C# khác nhau thế nào?",
+    "GroundTruth": "Queue là FIFO (First In First Out) - thêm cuối (Enqueue), lấy đầu (Dequeue). Stack là LIFO (Last In First Out) - thêm và lấy ở đỉnh (Push/Pop). Queue dùng cho task processing, Stack dùng cho undo/redo, parsing. Cả hai O(1) cho add/remove."
+  },
+  {
+    "Question": "HashSet<T> trong C# dùng khi nào?",
+    "GroundTruth": "HashSet lưu phần tử unique, không trùng lặp. Kiểm tra Contains O(1). Hỗ trợ set operations: UnionWith, IntersectWith, ExceptWith. Không có index, không đảm bảo thứ tự. Dùng khi cần kiểm tra tồn tại nhanh hoặc loại bỏ duplicate."
+  },
+  {
+    "Question": "Select và Where trong LINQ dùng như thế nào?",
+    "GroundTruth": "Where lọc phần tử theo điều kiện (tương đương WHERE trong SQL), trả về IEnumerable cùng kiểu. Select transform phần tử (tương đương SELECT), trả về kiểu mới. Có thể chain: list.Where(x => x.Age > 18).Select(x => x.Name) lấy tên người > 18 tuổi."
+  },
+  {
+    "Question": "OrderBy và ThenBy trong LINQ khác nhau thế nào?",
+    "GroundTruth": "OrderBy sắp xếp theo field đầu tiên (ascending). OrderByDescending sắp xếp giảm dần. ThenBy sắp xếp thứ cấp khi field đầu bằng nhau. Ví dụ: .OrderBy(s => s.Class).ThenBy(s => s.Name) sắp theo lớp, cùng lớp thì theo tên."
+  },
+  {
+    "Question": "Try-catch-finally trong C# hoạt động như thế nào?",
+    "GroundTruth": "Try chứa code có thể throw exception. Catch bắt và xử lý exception theo type. Finally luôn chạy dù có exception hay không (dùng để cleanup). Có thể có nhiều catch block cho các exception type khác nhau. Catch Exception là catch-all."
+  },
+  {
+    "Question": "Custom exception trong C# tạo như thế nào?",
+    "GroundTruth": "Custom exception kế thừa từ Exception hoặc ApplicationException. Cần override Message property hoặc truyền message vào base constructor. Nên có 3 constructor chuẩn (no-param, message, message+innerException). Đặt tên kết thúc bằng 'Exception'."
+  },
+  {
+    "Question": "Khi nào nên throw exception và khi nào không?",
+    "GroundTruth": "Throw exception khi: vi phạm business rule, null reference không mong đợi, invalid operation. Không throw khi: flow bình thường của chương trình, có thể dùng return value hoặc bool. Exception tốn performance, dùng TryParse thay Parse khi input có thể invalid."
+  },
+  {
+    "Question": "Exception filtering trong C# 6+ là gì?",
+    "GroundTruth": "Exception filter dùng 'when' clause trong catch: catch (Exception ex) when (ex.Message.Contains('timeout')). Filter chạy trước khi unwind stack, giúp log mà không mất stack trace. Khác với catch thông thường - không bắt exception nếu condition false."
+  },
+  {
+    "Question": "NullReferenceException phòng tránh bằng cách nào?",
+    "GroundTruth": "Dùng null check trước khi dùng: if (obj != null). Null-conditional operator: obj?.Property. Null-coalescing: obj ?? defaultValue. C# 8 Nullable reference types bật warning compile time. Pattern matching: if (obj is not null). Tốt nhất: không return null, dùng Optional pattern."
+  },
+  {
+    "Question": "Async/await trong C# là gì và khi nào dùng?",
+    "GroundTruth": "Async/await cho phép lập trình bất đồng bộ mà không block thread. Dùng khi: I/O operations (file, network, DB), long-running tasks. Method async trả về Task hoặc Task<T>. Await trả control về caller cho đến khi task hoàn thành. Tránh async void (chỉ dùng cho event handler)."
+  },
+  {
+    "Question": "Task.WhenAll và Task.WhenAny khác nhau thế nào?",
+    "GroundTruth": "WhenAll chờ TẤT CẢ tasks hoàn thành, trả về array kết quả. WhenAny chờ task ĐẦU TIÊN hoàn thành. WhenAll dùng khi cần tất cả kết quả (parallel execution). WhenAny dùng khi chỉ cần kết quả nhanh nhất hoặc implement timeout."
+  },
+  {
+    "Question": "Deadlock trong async C# xảy ra như thế nào?",
+    "GroundTruth": "Deadlock xảy ra khi dùng .Result hoặc .Wait() trong context có synchronization context (ASP.NET, WinForms). Thread bị block chờ task, task chờ thread → deadlock. Fix: dùng await thay .Result, ConfigureAwait(false) trong library code, hoặc dùng async all the way."
+  },
+  {
+    "Question": "CancellationToken trong C# dùng như thế nào?",
+    "GroundTruth": "CancellationToken cho phép cancel async operation. Tạo CancellationTokenSource, truyền Token vào async method. Trong method: kiểm tra token.IsCancellationRequested hoặc token.ThrowIfCancellationRequested(). Dùng trong HTTP requests, long tasks. ASP.NET Core tự truyền token khi client disconnect."
+  },
+  {
+    "Question": "ValueTask khác Task như thế nào và khi nào dùng?",
+    "GroundTruth": "ValueTask là struct (không cần allocate trên heap), tốt hơn Task khi result thường available synchronously. Dùng ValueTask khi: hot path, kết quả thường cache sẵn, performance critical. Không dùng ValueTask khi: await nhiều lần, convert sang Task. Không lạm dụng - chỉ khi profile cho thấy cần."
+  },
+  {
+    "Question": "Delegate trong C# là gì?",
+    "GroundTruth": "Delegate là type-safe function pointer, tham chiếu đến method có signature phù hợp. Khai báo: delegate ReturnType DelegateName(params). Dùng để: callback, event handling, LINQ (Func/Action là built-in delegate). Multicast delegate có thể tham chiếu nhiều method."
+  },
+  {
+    "Question": "Func<T> và Action<T> trong C# khác nhau thế nào?",
+    "GroundTruth": "Action không return value (void), tối đa 16 tham số. Func return value, type cuối là return type, tối đa 16 tham số. Ví dụ: Action<string> in ra màn hình; Func<int,int,int> cộng 2 số. Đây là built-in delegate giúp không cần khai báo delegate type riêng."
+  },
+  {
+    "Question": "Event trong C# hoạt động như thế nào?",
+    "GroundTruth": "Event là wrapper của delegate với từ khóa 'event', chỉ class khai báo mới invoke được. Subscribe bằng +=, unsubscribe bằng -=. Convention: EventHandler<TEventArgs>, tên event là PastTense (Clicked, Changed). Nên null-check trước invoke: EventName?.Invoke(sender, args)."
+  },
+  {
+    "Question": "Lambda expression trong C# là gì?",
+    "GroundTruth": "Lambda là anonymous function ngắn gọn, dùng => operator. Expression lambda: x => x * 2. Statement lambda: x => { return x * 2; }. Capture biến từ enclosing scope (closure). Thường dùng với LINQ, delegate, event. Compiler tạo method ẩn hoặc display class cho closure."
+  },
+  {
+    "Question": "Closure trong C# là gì và có vấn đề gì cần chú ý?",
+    "GroundTruth": "Closure là lambda capture biến từ scope bên ngoài. Capture theo reference, không phải value tại thời điểm tạo. Vấn đề kinh điển: for loop capture biến loop → tất cả lambda dùng giá trị cuối cùng. Fix: tạo biến local trong loop để capture. C# 5+ foreach đã fix vấn đề này."
+  },
+  {
+    "Question": "Entity Framework Core là gì và cách cấu hình?",
+    "GroundTruth": "EF Core là ORM cho .NET, map C# class sang database table. Cấu hình: cài NuGet package, tạo DbContext kế thừa từ DbContext, định nghĩa DbSet<T> cho mỗi entity, đăng ký trong Program.cs với AddDbContext. Code-first: tạo model trước rồi migration ra DB."
+  },
+  {
+    "Question": "Migration trong EF Core là gì và cách sử dụng?",
+    "GroundTruth": "Migration theo dõi thay đổi model và sync với database. Lệnh: dotnet ef migrations add TenMigration (tạo migration), dotnet ef database update (apply), dotnet ef migrations remove (xóa migration cuối). Migration tạo file Up() và Down() để apply/revert. Commit migration vào source control."
+  },
+  {
+    "Question": "Include() trong EF Core dùng để làm gì?",
+    "GroundTruth": "Include() là eager loading - load related entity cùng query. Tránh N+1 problem. Ví dụ: context.Orders.Include(o => o.Customer) load Order kèm Customer. ThenInclude() cho nested. Lazy loading load tự động khi access navigation property (cần UseLazyLoadingProxies). Chọn eager loading cho performance tốt hơn."
+  },
+  {
+    "Question": "AsNoTracking() trong EF Core dùng khi nào?",
+    "GroundTruth": "AsNoTracking() không track entity trong ChangeTracker, performance tốt hơn cho read-only queries. Dùng khi: chỉ đọc data, không cần update. Không dùng khi cần SaveChanges() cho entity đó. Có thể set mặc định: context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking."
+  },
+  {
+    "Question": "Repository Pattern với EF Core implement như thế nào?",
+    "GroundTruth": "Repository Pattern trừu tượng hóa data access. Tạo IRepository<T> interface với CRUD methods. Implement GenericRepository<T> dùng DbContext. Đăng ký trong DI container. Lợi ích: dễ test (mock repository), thay đổi data source không ảnh hưởng business logic. Cân nhắc Unit of Work pattern kết hợp."
+  },
+  {
+    "Question": "N+1 problem trong EF Core là gì và fix như thế nào?",
+    "GroundTruth": "N+1: 1 query load N entities, sau đó N query riêng cho related data của mỗi entity. Fix: dùng Include() để eager load, hoặc explicit loading với Load(). Có thể dùng Select() để project chỉ data cần. EF Core có warning cho N+1 khi bật logging. Tránh lazy loading trong loop."
+  },
+  {
+    "Question": "DbContext lifetime trong ASP.NET Core nên là gì?",
+    "GroundTruth": "DbContext nên đăng ký là Scoped (mặc định của AddDbContext) - một instance per HTTP request. Không dùng Singleton vì DbContext không thread-safe và có memory leak. Transient tạo instance mới mỗi lần inject - tốn tài nguyên. Scoped đảm bảo transaction trong một request."
+  },
+  {
+    "Question": "Fluent API trong EF Core dùng để làm gì?",
+    "GroundTruth": "Fluent API cấu hình mapping trong OnModelCreating(). Mạnh hơn Data Annotations. Dùng để: cấu hình table name, column name, relationships, constraints, indexes. Ví dụ: modelBuilder.Entity<Order>().HasOne(o => o.Customer).WithMany(c => c.Orders).HasForeignKey(o => o.CustomerId)."
+  },
+  {
+    "Question": "Cách thực hiện transaction trong EF Core?",
+    "GroundTruth": "SaveChanges() tự wrap trong transaction. Explicit transaction: using var transaction = await context.Database.BeginTransactionAsync(); try { ... await transaction.CommitAsync(); } catch { await transaction.RollbackAsync(); }. Dùng khi cần nhiều SaveChanges trong một transaction, hoặc kết hợp với raw SQL."
+  },
+  {
+    "Question": "Soft delete trong EF Core implement như thế nào?",
+    "GroundTruth": "Soft delete không xóa record mà đánh dấu IsDeleted=true. Implement: thêm IsDeleted field, override SaveChanges để set IsDeleted thay vì delete, dùng Global Query Filter: modelBuilder.Entity<T>().HasQueryFilter(e => !e.IsDeleted) để tự động filter. Cần .IgnoreQueryFilters() khi cần xem deleted records."
+  },
+  {
+    "Question": "MVC pattern trong ASP.NET Core hoạt động như thế nào?",
+    "GroundTruth": "Model: data và business logic. View: UI (Razor .cshtml). Controller: nhận request, gọi Model, trả View. Request pipeline: Routing → Controller → Action → Model → View → Response. Controller không chứa business logic - delegate sang Service layer. ViewBag/ViewData/ViewModel truyền data sang View."
+  },
+  {
+    "Question": "Routing trong ASP.NET Core hoạt động như thế nào?",
+    "GroundTruth": "Convention-based routing: {controller}/{action}/{id?} định nghĩa trong Program.cs. Attribute routing: [Route], [HttpGet], [HttpPost] trên Controller/Action. Route constraints: {id:int}, {name:alpha}. Endpoint routing (ASP.NET Core 3+) linh hoạt hơn. Area routing cho module hóa ứng dụng lớn."
+  },
+  {
+    "Question": "Model validation trong ASP.NET Core MVC thực hiện như thế nào?",
+    "GroundTruth": "Dùng Data Annotations trên Model: [Required], [StringLength], [Range], [EmailAddress], [RegularExpression]. Kiểm tra ModelState.IsValid trong Action. Client-side validation với jquery-validation. Custom validation: kế thừa ValidationAttribute. FluentValidation library cho complex rules."
+  },
+  {
+    "Question": "TempData và ViewBag khác nhau thế nào?",
+    "GroundTruth": "ViewBag: dynamic property, chỉ sống trong một request, dùng để truyền data từ Controller sang View. TempData: lưu vào session/cookie, sống qua redirect (một lần đọc rồi xóa), dùng sau Post-Redirect-Get pattern. ViewData là dictionary tương đương ViewBag. ViewModel là cách tốt nhất - strongly typed."
+  },
+  {
+    "Question": "Middleware trong ASP.NET Core là gì?",
+    "GroundTruth": "Middleware là component xử lý HTTP request/response theo pipeline. Thứ tự đăng ký quan trọng. Mỗi middleware có thể: xử lý request, gọi next middleware, xử lý response. Built-in: Authentication, Authorization, Static Files, Routing. Custom: app.Use() hoặc tạo class với Invoke/InvokeAsync method."
+  }
+]

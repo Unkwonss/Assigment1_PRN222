@@ -1,0 +1,410 @@
+@model PresentationLayer.Models.UserSearchViewModel
+
+@{
+    ViewData["Title"] = "Quản lý tài khoản";
+    Layout = "_Layout";
+    var sortBy    = (string?)ViewBag.SortBy    ?? "fullName";
+    var sortOrder = (string?)ViewBag.SortOrder ?? "asc";
+
+    string SortIcon(string col) => sortBy == col
+        ? (sortOrder == "asc" ? "↑" : "↓")
+        : "";
+
+    string NextOrder(string col) => sortBy == col && sortOrder == "asc" ? "desc" : "asc";
+}
+
+<div class="container-fluid px-4">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
+        <div>
+            <h2 class="card-title-gradient mb-1">
+                <i class="bi bi-people-fill text-glow"></i> Quản lý tài khoản
+            </h2>
+            <p class="text-muted-custom mb-0">
+                Hiển thị <strong class="text-white">@Model.FilteredCount</strong> / <strong class="text-white">@Model.TotalCount</strong> tài khoản
+            </p>
+        </div>
+
+        <button class="btn btn-glow-primary d-flex align-items-center gap-2"
+                data-bs-toggle="modal" data-bs-target="#createUserModal"
+                id="btnCreateUser">
+            <i class="bi bi-person-plus-fill"></i> Thêm tài khoản mới
+        </button>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    icon: 'success', title: 'Thành công!',
+                    text: '@Html.Raw(TempData["Success"])',
+                    background: 'rgba(13, 17, 28, 0.95)', color: '#fff', confirmButtonColor: '#6366f1'
+                });
+            });
+        </script>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    icon: 'error', title: 'Thất bại!',
+                    text: '@Html.Raw(TempData["Error"])',
+                    background: 'rgba(13, 17, 28, 0.95)', color: '#fff', confirmButtonColor: '#ef4444'
+                });
+            });
+        </script>
+    }
+
+    @* =====================================================
+       SERVER-SIDE SEARCH & FILTER FORM (LINQ)
+       ===================================================== *@
+    <div class="card-glass py-3 mb-4">
+        <form asp-action="Users" method="get" id="searchForm">
+            <div class="row align-items-center g-3">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-blur border-end-0 border-white border-opacity-10 text-muted-custom" style="border-radius: 8px 0 0 8px;">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" name="searchTerm" value="@Model.SearchTerm"
+                               class="form-control form-glass border-start-0" style="border-radius: 0 8px 8px 0;"
+                               placeholder="Tìm kiếm theo Tên, Email, Username..." id="searchInput"
+                               autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="roleFilter" class="form-select form-glass" id="roleFilter"
+                            onchange="document.getElementById('searchForm').submit()">
+                        <option value="">Tất cả vai trò</option>
+                        <option value="Admin"   selected="@(Model.RoleFilter == "Admin"   ? "selected" : null)">Admin</option>
+                        <option value="Teacher" selected="@(Model.RoleFilter == "Teacher" ? "selected" : null)">Teacher</option>
+                        <option value="Student" selected="@(Model.RoleFilter == "Student" ? "selected" : null)">Student</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-glow-primary w-100" id="btnSearch">
+                        <i class="bi bi-search"></i> Tìm kiếm
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a asp-action="Users" class="btn btn-outline-glass w-100" id="btnClear">
+                        <i class="bi bi-x-circle"></i> Xóa bộ lọc
+                    </a>
+                </div>
+                <input type="hidden" name="sortBy"    value="@sortBy" />
+                <input type="hidden" name="sortOrder" value="@sortOrder" />
+            </div>
+        </form>
+    </div>
+
+    @* =====================================================
+       USERS TABLE
+       ===================================================== *@
+    <div class="card-glass p-0 overflow-hidden shadow-lg">
+        <div class="table-responsive">
+            <table class="table table-glass mb-0" id="usersTable">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">ID</th>
+                        <th>
+                            <a href="@Url.Action("Users", new { searchTerm = Model.SearchTerm, roleFilter = Model.RoleFilter, sortBy = "fullName", sortOrder = NextOrder("fullName") })"
+                               class="text-white text-decoration-none d-inline-flex align-items-center gap-1">
+                                Họ và tên <span class="text-glow">@SortIcon("fullName")</span>
+                            </a>
+                        </th>
+                        <th>
+                            <a href="@Url.Action("Users", new { searchTerm = Model.SearchTerm, roleFilter = Model.RoleFilter, sortBy = "username", sortOrder = NextOrder("username") })"
+                               class="text-white text-decoration-none d-inline-flex align-items-center gap-1">
+                                Username <span class="text-glow">@SortIcon("username")</span>
+                            </a>
+                        </th>
+                        <th>
+                            <a href="@Url.Action("Users", new { searchTerm = Model.SearchTerm, roleFilter = Model.RoleFilter, sortBy = "email", sortOrder = NextOrder("email") })"
+                               class="text-white text-decoration-none d-inline-flex align-items-center gap-1">
+                                Email <span class="text-glow">@SortIcon("email")</span>
+                            </a>
+                        </th>
+                        <th>
+                            <a href="@Url.Action("Users", new { searchTerm = Model.SearchTerm, roleFilter = Model.RoleFilter, sortBy = "role", sortOrder = NextOrder("role") })"
+                               class="text-white text-decoration-none d-inline-flex align-items-center gap-1">
+                                Vai trò <span class="text-glow">@SortIcon("role")</span>
+                            </a>
+                        </th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Users.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <i class="bi bi-search fs-1 text-muted-custom d-block mb-2"></i>
+                                <span class="text-muted-custom">Không tìm thấy tài khoản nào phù hợp</span>
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr>
+                            <td><strong class="text-muted-custom">#@user.UserId</strong></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar-glow" style="width: 28px; height: 28px; font-size: 0.8rem;">
+                                        @user.FullName[0].ToString().ToUpper()
+                                    </div>
+                                    <span class="fw-semibold text-white">@user.FullName</span>
+                                </div>
+                            </td>
+                            <td><code class="text-glow text-opacity-75">@user.Username</code></td>
+                            <td class="text-white">@user.Email</td>
+                            <td>
+                                @if (user.Role == "Admin")
+                                {
+                                    <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-20 px-2 py-1">Admin</span>
+                                }
+                                else if (user.Role == "Teacher")
+                                {
+                                    <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-20 px-2 py-1">Teacher</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-20 px-2 py-1">Student</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-2">
+                                    @if (user.UserId != 0)
+                                    {
+                                        <button class="btn btn-sm btn-outline-glass d-flex align-items-center gap-1 py-1 px-2 btn-edit-user"
+                                                data-id="@user.UserId"
+                                                data-username="@user.Username"
+                                                data-fullname="@user.FullName"
+                                                data-email="@user.Email"
+                                                data-role="@user.Role"
+                                                title="Chỉnh sửa tài khoản">
+                                            <i class="bi bi-pencil-square"></i> Sửa
+                                        </button>
+                                        <button class="btn btn-sm btn-logout d-flex align-items-center gap-1 py-1 px-2"
+                                                onclick="confirmDelete('@user.UserId', '@user.FullName')"
+                                                title="Xóa tài khoản">
+                                            <i class="bi bi-trash"></i> Xóa
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted-custom small px-2">Hệ thống</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* =====================================================
+   MODAL: Create User
+   ===================================================== *@
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0" id="createUserModalLabel">
+                    <i class="bi bi-person-plus-fill text-glow"></i> Tạo tài khoản mới
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-controller="Account" asp-action="CreateUser" method="post" autocomplete="off" id="createUserForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4">
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Họ và tên <span class="text-danger">*</span></label>
+                        <input type="text" name="FullName" class="form-control form-glass"
+                               placeholder="Nguyễn Văn A" required minlength="2" maxlength="100" id="createFullName" />
+                        <div class="invalid-feedback">Họ và tên phải có ít nhất 2 ký tự.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Tên đăng nhập <span class="text-danger">*</span></label>
+                        <input type="text" name="Username" class="form-control form-glass"
+                               placeholder="anv123" required minlength="3" maxlength="50"
+                               pattern="^[a-zA-Z0-9_\.]+$" title="Chỉ chứa chữ cái, số, _ và ."
+                               id="createUsername" />
+                        <div class="invalid-feedback">Tên đăng nhập không hợp lệ (3-50 ký tự, chữ cái/số/_ .).</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Địa chỉ Email <span class="text-danger">*</span></label>
+                        <input type="email" name="Email" class="form-control form-glass"
+                               placeholder="email@domain.com" required maxlength="100" id="createEmail" />
+                        <div class="invalid-feedback">Địa chỉ Email không hợp lệ.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Mật khẩu <span class="text-danger">*</span></label>
+                        <input type="password" name="Password" class="form-control form-glass"
+                               placeholder="••••••••" required minlength="6" maxlength="100" id="createPassword" />
+                        <div class="invalid-feedback">Mật khẩu phải có ít nhất 6 ký tự.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Vai trò thành viên <span class="text-danger">*</span></label>
+                        <select name="Role" class="form-select form-glass" required id="createRole">
+                            <option value="Student">Student (Học viên)</option>
+                            <option value="Teacher">Teacher (Giảng viên)</option>
+                            <option value="Admin">Admin (Quản trị viên)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-glow-primary" id="btnCreateSubmit">Tạo tài khoản</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* =====================================================
+   MODAL: Edit User
+   ===================================================== *@
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0" id="editUserModalLabel">
+                    <i class="bi bi-pencil-square text-glow"></i> Chỉnh sửa tài khoản
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-controller="Account" asp-action="EditUser" method="post" autocomplete="off" id="editUserForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="UserId" id="editUserId" />
+                <div class="modal-body p-4">
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Họ và tên <span class="text-danger">*</span></label>
+                        <input type="text" name="FullName" id="editFullName" class="form-control form-glass"
+                               required minlength="2" maxlength="100" />
+                        <div class="invalid-feedback">Họ và tên phải có ít nhất 2 ký tự.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Tên đăng nhập <span class="text-danger">*</span></label>
+                        <input type="text" name="Username" id="editUsername" class="form-control form-glass"
+                               required minlength="3" maxlength="50"
+                               pattern="^[a-zA-Z0-9_\.]+$" title="Chỉ chứa chữ cái, số, _ và ." />
+                        <div class="invalid-feedback">Tên đăng nhập không hợp lệ.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Địa chỉ Email <span class="text-danger">*</span></label>
+                        <input type="email" name="Email" id="editEmail" class="form-control form-glass"
+                               required maxlength="100" />
+                        <div class="invalid-feedback">Địa chỉ Email không hợp lệ.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Mật khẩu mới <small class="text-muted-custom">(để trống nếu không đổi)</small></label>
+                        <input type="password" name="Password" id="editPassword" class="form-control form-glass"
+                               placeholder="••••••••" minlength="6" maxlength="100" />
+                        <div class="invalid-feedback">Mật khẩu phải có ít nhất 6 ký tự.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Vai trò thành viên <span class="text-danger">*</span></label>
+                        <select name="Role" id="editRole" class="form-select form-glass" required>
+                            <option value="Student">Student (Học viên)</option>
+                            <option value="Teacher">Teacher (Giảng viên)</option>
+                            <option value="Admin">Admin (Quản trị viên)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-glow-primary" id="btnEditSubmit">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* Hidden Delete Form *@
+<form id="deleteUserForm" asp-controller="Account" asp-action="DeleteUser" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="userId" id="deleteUserId" />
+</form>
+
+@section Scripts {
+    <script>
+        // --- Edit Modal Population ---
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sử dụng event delegation để bắt sự kiện click cho các nút edit, 
+            // đảm bảo hoạt động tốt ngay cả sau khi kết quả bảng được cập nhật động hoặc phân trang
+            document.addEventListener('click', function(e) {
+                var btn = e.target.closest('.btn-edit-user');
+                if (btn) {
+                    var id = btn.getAttribute('data-id');
+                    var username = btn.getAttribute('data-username');
+                    var fullName = btn.getAttribute('data-fullname');
+                    var email = btn.getAttribute('data-email');
+                    var role = btn.getAttribute('data-role');
+
+                    document.getElementById('editUserId').value   = id;
+                    document.getElementById('editUsername').value = username;
+                    document.getElementById('editFullName').value = fullName;
+                    document.getElementById('editEmail').value    = email;
+                    document.getElementById('editRole').value     = role;
+                    document.getElementById('editPassword').value = '';
+
+                    var modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+                    modal.show();
+                }
+            });
+        });
+
+        // --- Delete Confirmation ---
+        function confirmDelete(id, name) {
+            Swal.fire({
+                title: 'Xác nhận xóa?',
+                text: "Tài khoản '" + name + "' sẽ bị xóa vĩnh viễn!",
+                icon: 'warning',
+                showCancelButton: true,
+                background: 'rgba(13, 17, 28, 0.95)', color: '#fff',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: 'rgba(255,255,255,0.08)',
+                confirmButtonText: 'Đồng ý xóa',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('deleteUserId').value = id;
+                    document.getElementById('deleteUserForm').submit();
+                }
+            });
+        }
+
+        // --- HTML5 Validation on modals ---
+        ['createUserForm', 'editUserForm'].forEach(function(formId) {
+            document.getElementById(formId).addEventListener('submit', function(e) {
+                if (!this.checkValidity()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                this.classList.add('was-validated');
+            });
+        });
+
+        // --- Live search with debounce ---
+        var searchTimer;
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function() {
+                document.getElementById('searchForm').submit();
+            }, 500);
+        });
+    </script>
+}

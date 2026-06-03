@@ -1,0 +1,863 @@
+@model IEnumerable<BusinessLayer.DTOs.SubjectDto>
+
+@{
+    ViewData["Title"] = "Quản lý Tài liệu & Học liệu";
+    Layout = "_Layout";
+    var strategies = ViewBag.Strategies as IEnumerable<BusinessLayer.DTOs.ChunkingStrategyDto> ?? new List<BusinessLayer.DTOs.ChunkingStrategyDto>();
+    var models = ViewBag.EmbeddingModels as IEnumerable<BusinessLayer.DTOs.EmbeddingModelDto> ?? new List<BusinessLayer.DTOs.EmbeddingModelDto>();
+}
+
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <h2 class="card-title-gradient mb-1">
+            <i class="bi bi-folder-fill text-glow"></i> Kho Học Liệu & Chỉ Mục RAG
+        </h2>
+        <p class="text-muted-custom mb-0">Quản lý môn học, phân tách chương và tải lên tài liệu phục vụ huấn luyện mô hình RAG.</p>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công!',
+                text: '@Html.Raw(TempData["Success"])',
+                background: 'rgba(13, 17, 28, 0.95)',
+                color: '#fff',
+                confirmButtonColor: '#6366f1'
+            });
+        </script>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <script>
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi!',
+                text: '@Html.Raw(TempData["Error"])',
+                background: 'rgba(13, 17, 28, 0.95)',
+                color: '#fff',
+                confirmButtonColor: '#ef4444'
+            });
+        </script>
+    }
+
+    <div class="row g-4">
+        <!-- 1. LEFT PANEL: SUBJECT MASTER LIST -->
+        <div class="col-lg-4">
+            <div class="card-glass h-100 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-glow mb-0"><i class="bi bi-journal-bookmark-fill"></i> Danh sách môn học</h5>
+                    <button class="btn btn-sm btn-glow-primary py-1 px-2" data-bs-toggle="modal" data-bs-target="#createSubjectModal">
+                        <i class="bi bi-plus-lg"></i> Thêm
+                    </button>
+                </div>
+                
+                <div class="list-group list-group-flush gap-2" id="subjectList">
+                    @foreach (var sub in Model)
+                    {
+                        <div class="session-item d-flex align-items-center justify-content-between subject-item" data-id="@sub.SubjectId" data-code="@sub.SubjectCode" data-name="@sub.SubjectName" onclick="selectSubject(@sub.SubjectId, this)">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-journal-code text-glow"></i>
+                                <div>
+                                    <span class="fw-bold text-white">@sub.SubjectCode</span>
+                                    <div class="small text-muted-custom">@sub.SubjectName</div>
+                                </div>
+                            </div>
+                            <div class="d-inline-flex gap-1 action-buttons">
+                                <button class="btn btn-link text-glow p-1 btn-edit-sub" onclick="event.stopPropagation(); openEditSubjectModal(@sub.SubjectId, '@sub.SubjectCode', '@sub.SubjectName')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-link text-danger p-1 btn-delete-sub" onclick="event.stopPropagation(); confirmDeleteSubject(@sub.SubjectId, '@sub.SubjectCode')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. CENTER PANEL: CHAPTER LIST -->
+        <div class="col-lg-4">
+            <div class="card-glass h-100 p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-glow mb-0"><i class="bi bi-list-ol"></i> Các chương học</h5>
+                    <button class="btn btn-sm btn-glow-primary py-1 px-2 d-none" id="btnAddChapter" onclick="openAddChapterModal()">
+                        <i class="bi bi-plus-lg"></i> Thêm
+                    </button>
+                </div>
+
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center border border-dashed border-white border-opacity-10 rounded-3 p-4" id="chapterPlaceholder">
+                    <div class="text-center text-muted-custom">
+                        <i class="bi bi-journal-check fs-1 mb-2 d-block"></i>
+                        Vui lòng chọn môn học ở cột trái
+                    </div>
+                </div>
+
+                <div class="list-group list-group-flush gap-2 d-none" id="chapterList">
+                    <!-- Chapters will be loaded dynamically via AJAX -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. RIGHT PANEL: DOCUMENT LIST -->
+        <div class="col-lg-4">
+            <div class="card-glass h-100 p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-glow mb-0"><i class="bi bi-file-earmark-text-fill"></i> Tài liệu chi tiết</h5>
+                    <div class="d-flex gap-2">
+                        <button id="btnReIndexAll"
+                                class="btn btn-sm btn-warning py-1 px-2 d-none"
+                                onclick="reIndexAll()">
+                            🔄 Re-Index All
+                        </button>
+                        <button class="btn btn-sm btn-glow-primary py-1 px-2 d-none" id="btnUploadDoc" onclick="openUploadDocModal()">
+                            <i class="bi bi-upload"></i> Tải lên
+                        </button>
+                    </div>
+                </div>
+
+                <div id="reIndexProgress" style="display:none">
+                    <div class="progress mt-2">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%">
+                            Đang re-index, vui lòng chờ...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center border border-dashed border-white border-opacity-10 rounded-3 p-4" id="docPlaceholder">
+                    <div class="text-center text-muted-custom">
+                        <i class="bi bi-file-earmark-zip fs-1 mb-2 d-block"></i>
+                        Vui lòng chọn chương học ở cột giữa
+                    </div>
+                </div>
+
+                <div class="list-group list-group-flush gap-2 d-none" id="documentList">
+                    <!-- Documents will be loaded dynamically via AJAX -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL POPUPS FOR CRUD (Strictly Complies with Popup Dialogs)
+     ========================================================= -->
+
+<!-- Subject Modals -->
+<!-- Create Subject Modal -->
+<div class="modal fade" id="createSubjectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-plus-square-fill"></i> Thêm môn học mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CreateSubject" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Mã môn học (Subject Code)</label>
+                        <input type="text" name="subjectCode" class="form-control form-glass" placeholder="ví dụ: PRN222" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Tên môn học (Subject Name)</label>
+                        <input type="text" name="subjectName" class="form-control form-glass" placeholder="ví dụ: Lập trình Web MVC .NET" required />
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-glow-primary">Lưu lại</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Subject Modal -->
+<div class="modal fade" id="editSubjectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-pencil-square"></i> Chỉnh sửa môn học</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="EditSubject" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="subjectId" id="editSubId" />
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Mã môn học (Subject Code)</label>
+                        <input type="text" name="subjectCode" id="editSubCode" class="form-control form-glass" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Tên môn học (Subject Name)</label>
+                        <input type="text" name="subjectName" id="editSubName" class="form-control form-glass" required />
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-glow-primary">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Subject Delete Form -->
+<form id="deleteSubForm" asp-action="DeleteSubject" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="subjectId" id="deleteSubId" />
+</form>
+
+<!-- Chapter Modals -->
+<!-- Create/Edit Chapter Modal -->
+<div class="modal fade" id="chapterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0" id="chapterModalTitle"><i class="bi bi-plus-square-fill"></i> Thêm chương học</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="chapterForm" onsubmit="saveChapter(event)">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="chapterId" id="modalChapterId" />
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Số chương (Chapter Number)</label>
+                        <input type="number" name="chapterNumber" id="modalChapterNumber" class="form-control form-glass" min="1" placeholder="1" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Tên chương (Chapter Name)</label>
+                        <input type="text" name="chapterName" id="modalChapterName" class="form-control form-glass" placeholder="ví dụ: Thiết kế cơ sở dữ liệu" required />
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-glow-primary">Lưu chương</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Document Modals -->
+<!-- Upload Document Modal -->
+<div class="modal fade" id="uploadDocModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-upload"></i> Tải lên học liệu tài liệu</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="uploadDocForm" onsubmit="uploadDoc(event)" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Tiêu đề tài liệu</label>
+                        <input type="text" name="title" id="uploadTitle" class="form-control form-glass" placeholder="Tên tài liệu..." required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Chọn tệp (Hỗ trợ .txt, .pdf, .docx, .pptx)</label>
+                        <input type="file" name="file" id="uploadFile" class="form-control form-glass" accept=".txt,.pdf,.docx,.pptx" required />
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-glow-primary">Tải lên</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- RAG Chunking Index Modal (Parameters setup in popup) -->
+<div class="modal fade" id="indexDocModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-cpu-fill"></i> Thiết lập phân mảnh & lập chỉ mục</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="indexDocForm" onsubmit="runIndexDoc(event)">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="documentId" id="indexDocId" />
+                <div class="modal-body p-4 col-12">
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Mô hình nhúng (Embedding Model)</label>
+                        <select name="modelId" id="indexModelSelect" class="form-select form-glass" required>
+                            @foreach (var m in models)
+                            {
+                                <option value="@m.ModelId">@m.ModelName (@m.Provider)</option>
+                            }
+                        </select>
+                        <div id="modelHelpText" class="mt-2 p-2 rounded small" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); font-size: 0.75rem; color: #a5b4fc; display: none;"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Chiến lược phân nhỏ (Chunk Strategy)</label>
+                        <select name="strategyId" id="indexStrategySelect" class="form-select form-glass" required>
+                            @foreach (var s in strategies)
+                            {
+                                <option value="@s.StrategyId">@s.StrategyName</option>
+                            }
+                        </select>
+                        <div id="strategyHelpText" class="mt-2 p-2 rounded small" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem; color: #a7f3d0; display: none;"></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted-custom">Kích thước (Chunk Size)</label>
+                            <input type="number" name="chunkSize" class="form-control form-glass" value="500" min="100" max="2000" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted-custom">Chồng lặp (Chunk Overlap)</label>
+                            <input type="number" name="chunkOverlap" class="form-control form-glass" value="100" min="0" max="500" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-glow-primary d-flex align-items-center gap-2" id="btnStartIndex">
+                        <i class="bi bi-play-circle-fill"></i> Bắt đầu xử lý
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Indexes List and Chunks Previews Modal -->
+<div class="modal fade" id="viewChunksModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-eye-fill"></i> Xem chi tiết các phân mảnh chỉ mục</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Dropdown of index versions -->
+                <div class="mb-4">
+                    <label class="form-label text-muted-custom">Chọn phiên bản chỉ mục (Index Version)</label>
+                    <select id="indexVersionSelect" class="form-select form-glass" onchange="loadChunksForSelectedVersion()">
+                        <!-- Options populated via AJAX -->
+                    </select>
+                </div>
+                
+                <!-- Scrollable chunks list -->
+                <div class="border border-white border-opacity-10 rounded-3 p-3 overflow-auto bg-dark bg-opacity-25" style="max-height: 400px;" id="chunksListContainer">
+                    <div class="text-center text-muted-custom py-5" id="chunksPlaceholder">
+                        <i class="bi bi-box fs-1 mb-2 d-block"></i>
+                        Chọn phiên bản chỉ mục để hiển thị nội dung phân mảnh
+                    </div>
+                    <!-- Chunks rendered here -->
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-glass">
+                <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var selectedSubjectId = 0;
+        var selectedChapterId = 0;
+
+        // --- 1. Subject Management ---
+        function selectSubject(id, elem) {
+            selectedSubjectId = id;
+            selectedChapterId = 0;
+            
+            // Highlight selected
+            $(".subject-item").removeClass("active");
+            $(elem).addClass("active");
+
+            // Reset placeholders
+            $("#chapterPlaceholder").removeClass("d-none").html('<div class="spinner-border text-glow mb-2" role="status"></div><div class="text-muted-custom">Đang tải các chương...</div>');
+            $("#chapterList").addClass("d-none").empty();
+            
+            $("#docPlaceholder").removeClass("d-none").html('<i class="bi bi-file-earmark-zip fs-1 mb-2 d-block"></i>Vui lòng chọn chương học ở cột giữa');
+            $("#documentList").addClass("d-none").empty();
+            $("#btnUploadDoc").addClass("d-none");
+            $("#btnReIndexAll").removeClass("d-none");
+            $("#btnAddChapter").removeClass("d-none");
+
+            // Fetch Chapters via AJAX
+            $.get("/Document/GetChapters?subjectId=" + id, function (data) {
+                $("#chapterPlaceholder").addClass("d-none");
+                $("#chapterList").removeClass("d-none");
+
+                if (data.length === 0) {
+                    $("#chapterList").html('<div class="text-center text-muted-custom py-4">Môn học này chưa có chương học nào.</div>');
+                    return;
+                }
+
+                var html = "";
+                data.forEach(function (chap) {
+                    html += `
+                        <div class="session-item d-flex align-items-center justify-content-between chapter-item" data-id="${chap.chapterId}" onclick="selectChapter(${chap.chapterId}, this)">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary bg-opacity-25 text-glow border border-white border-opacity-10 px-2">Chương ${chap.chapterNumber}</span>
+                                <span class="fw-bold text-white">${chap.chapterName}</span>
+                            </div>
+                            <div class="d-inline-flex gap-1 action-buttons">
+                                <button class="btn btn-link text-glow p-1" onclick="event.stopPropagation(); openEditChapterModal(${chap.chapterId}, ${chap.chapterNumber}, '${chap.chapterName}')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-link text-danger p-1" onclick="event.stopPropagation(); confirmDeleteChapter(${chap.chapterId})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                $("#chapterList").html(html);
+            });
+        }
+
+        function openEditSubjectModal(id, code, name) {
+            $("#editSubId").val(id);
+            $("#editSubCode").val(code);
+            $("#editSubName").val(name);
+            var modal = new bootstrap.Modal(document.getElementById('editSubjectModal'));
+            modal.show();
+        }
+
+        function confirmDeleteSubject(id, code) {
+            Swal.fire({
+                title: 'Xác nhận xóa môn học?',
+                text: "Môn học '" + code + "', toàn bộ chương học và học liệu đi kèm sẽ bị xóa vĩnh viễn!",
+                icon: 'warning',
+                showCancelButton: true,
+                background: 'rgba(13, 17, 28, 0.95)',
+                color: '#fff',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: 'rgba(255, 255, 255, 0.08)',
+                confirmButtonText: 'Đồng ý xóa',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $("#deleteSubId").val(id);
+                    $("#deleteSubForm").submit();
+                }
+            });
+        }
+
+        // --- 2. Chapter Management (AJAX) ---
+        function openAddChapterModal() {
+            $("#chapterModalTitle").html('<i class="bi bi-plus-square-fill"></i> Thêm chương học mới');
+            $("#modalChapterId").val("");
+            $("#modalChapterNumber").val("");
+            $("#modalChapterName").val("");
+            
+            var modal = new bootstrap.Modal(document.getElementById('chapterModal'));
+            modal.show();
+        }
+
+        function openEditChapterModal(id, num, name) {
+            $("#chapterModalTitle").html('<i class="bi bi-pencil-square"></i> Chỉnh sửa chương học');
+            $("#modalChapterId").val(id);
+            $("#modalChapterNumber").val(num);
+            $("#modalChapterName").val(name);
+            
+            var modal = new bootstrap.Modal(document.getElementById('chapterModal'));
+            modal.show();
+        }
+
+        function saveChapter(e) {
+            e.preventDefault();
+            var id = $("#modalChapterId").val();
+            var url = id === "" ? "/Document/CreateChapter" : "/Document/EditChapter";
+            
+            var formData = {
+                chapterId: id,
+                subjectId: selectedSubjectId,
+                chapterNumber: $("#modalChapterNumber").val(),
+                chapterName: $("#modalChapterName").val(),
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            };
+
+            $.post(url, formData, function (res) {
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('chapterModal')).hide();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công!',
+                        text: res.message,
+                        background: 'rgba(13, 17, 28, 0.95)',
+                        color: '#fff',
+                        confirmButtonColor: '#6366f1'
+                    }).then(() => {
+                        // Reload Chapters
+                        selectSubject(selectedSubjectId, $(".subject-item.active")[0]);
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Thất bại!',
+                        text: res.message,
+                        background: 'rgba(13, 17, 28, 0.95)',
+                        color: '#fff',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            });
+        }
+
+        function confirmDeleteChapter(id) {
+            Swal.fire({
+                title: 'Xác nhận xóa chương học?',
+                text: "Toàn bộ tài liệu trong chương này cũng sẽ bị xóa vĩnh viễn!",
+                icon: 'warning',
+                showCancelButton: true,
+                background: 'rgba(13, 17, 28, 0.95)',
+                color: '#fff',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: 'rgba(255, 255, 255, 0.08)',
+                confirmButtonText: 'Đồng ý xóa',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post("/Document/DeleteChapter", { chapterId: id, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() }, function (res) {
+                        if (res.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Đã xóa!',
+                                text: res.message,
+                                background: 'rgba(13, 17, 28, 0.95)',
+                                color: '#fff',
+                                confirmButtonColor: '#6366f1'
+                            }).then(() => {
+                                selectSubject(selectedSubjectId, $(".subject-item.active")[0]);
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Lỗi!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff' });
+                        }
+                    });
+                }
+            });
+        }
+
+        // --- 3. Document Management (AJAX) ---
+        function selectChapter(id, elem) {
+            selectedChapterId = id;
+            
+            // Highlight selected
+            $(".chapter-item").removeClass("active");
+            $(elem).addClass("active");
+
+            // Reset placeholders
+            $("#docPlaceholder").removeClass("d-none").html('<div class="spinner-border text-glow mb-2" role="status"></div><div class="text-muted-custom">Đang tải các tài liệu...</div>');
+            $("#documentList").addClass("d-none").empty();
+            $("#btnUploadDoc").removeClass("d-none");
+            $("#btnReIndexAll").removeClass("d-none");
+
+            // Fetch Documents
+            $.get("/Document/GetDocuments?chapterId=" + id, function (data) {
+                $("#docPlaceholder").addClass("d-none");
+                $("#documentList").removeClass("d-none");
+
+                if (data.length === 0) {
+                    $("#documentList").html('<div class="text-center text-muted-custom py-4">Chương học này chưa có tài liệu nào.</div>');
+                    return;
+                }
+
+                var html = "";
+                data.forEach(function (doc) {
+                    var badgeColor = "bg-warning";
+                    if (doc.status === "Indexed") badgeColor = "bg-success";
+                    if (doc.status === "Failed") badgeColor = "bg-danger";
+                    if (doc.status === "Processing") badgeColor = "bg-info";
+
+                    var embedBadge = `<span class="badge bg-danger bg-opacity-25 border border-white border-opacity-10">❌ Chưa Index</span>`;
+                    if (doc.status === "Indexed") {
+                        if (doc.embeddingStatus === "VectorReady")
+                            embedBadge = `<span class="badge bg-success bg-opacity-25 border border-white border-opacity-10">✅ Vector Ready</span>`;
+                        else if (doc.embeddingStatus === "NeedsReIndex")
+                            embedBadge = `<span class="badge bg-warning bg-opacity-25 border border-white border-opacity-10">⚠️ Cần Re-Index</span>`;
+                        else
+                            embedBadge = `<span class="badge bg-danger bg-opacity-25 border border-white border-opacity-10">⚠️ Chưa có vector</span>`;
+                    }
+
+                    html += `
+                        <div class="card-glass p-3 mb-2" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-file-earmark-code fs-4 text-glow"></i>
+                                    <div>
+                                        <div class="fw-bold text-white small">${doc.title}</div>
+                                        <div class="small text-muted-custom" style="font-size:0.75rem;">${doc.fileName} (${doc.fileSize})</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    <span class="badge ${badgeColor} bg-opacity-25 border border-white border-opacity-10">${doc.status}</span>
+                                    ${embedBadge}
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-white border-opacity-10">
+                                <span class="small text-muted-custom" style="font-size:0.7rem;"><i class="bi bi-person-circle"></i> ${doc.uploadedBy}</span>
+                                <div class="d-inline-flex gap-1">
+                                    <button class="btn btn-sm btn-outline-glass py-1 px-2 d-flex align-items-center gap-1" onclick="openIndexModal(${doc.documentId})" style="font-size:0.75rem;">
+                                        <i class="bi bi-cpu-fill text-glow"></i> Index
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-glass py-1 px-2 d-flex align-items-center gap-1" onclick="openViewChunksModal(${doc.documentId})" style="font-size:0.75rem;">
+                                        <i class="bi bi-eye-fill"></i> Xem
+                                    </button>
+                                    <button class="btn btn-sm btn-logout py-1 px-2 d-flex align-items-center gap-1" onclick="confirmDeleteDoc(${doc.documentId})" style="font-size:0.75rem;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                $("#documentList").html(html);
+            });
+        }
+
+        function reIndexAll() {
+            if (!selectedSubjectId) {
+                Swal.fire({ icon: 'warning', title: 'Chọn môn học', text: 'Vui lòng chọn môn học trước khi re-index.', background: 'rgba(13, 17, 28, 0.95)', color: '#fff' });
+                return;
+            }
+
+            document.getElementById('btnReIndexAll').disabled = true;
+            document.getElementById('reIndexProgress').style.display = 'block';
+
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            const body = new URLSearchParams();
+            body.append('subjectId', selectedSubjectId);
+            body.append('__RequestVerificationToken', token);
+
+            fetch('/Document/ReIndexAll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: body.toString()
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('Thành công!', data.message, 'success')
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire('Lỗi!', data.message || 'Re-index thất bại', 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Lỗi!', err.toString(), 'error');
+            })
+            .finally(() => {
+                document.getElementById('btnReIndexAll').disabled = false;
+                document.getElementById('reIndexProgress').style.display = 'none';
+            });
+        }
+
+        function openUploadDocModal() {
+            $("#uploadTitle").val("");
+            $("#uploadFile").val("");
+            
+            var modal = new bootstrap.Modal(document.getElementById('uploadDocModal'));
+            modal.show();
+        }
+
+        function uploadDoc(e) {
+            e.preventDefault();
+            var form = document.getElementById("uploadDocForm");
+            var formData = new FormData(form);
+            formData.append("chapterId", selectedChapterId);
+
+            Swal.fire({
+                title: 'Đang tải lên...',
+                html: 'Vui lòng chờ trong giây lát...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            $.ajax({
+                url: "/Document/UploadDocument",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    Swal.close();
+                    bootstrap.Modal.getInstance(document.getElementById('uploadDocModal')).hide();
+                    if (res.success) {
+                        Swal.fire({ icon: 'success', title: 'Thành công!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff' }).then(() => {
+                            selectChapter(selectedChapterId, $(".chapter-item.active")[0]);
+                        });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Thất bại!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff' });
+                    }
+                }
+            });
+        }
+
+        function confirmDeleteDoc(id) {
+            Swal.fire({
+                title: 'Xác nhận xóa tài liệu?',
+                text: "Tất cả các phân mảnh và chỉ mục đã thiết lập sẽ bị xóa vĩnh viễn!",
+                icon: 'warning',
+                showCancelButton: true,
+                background: 'rgba(13, 17, 28, 0.95)',
+                color: '#fff',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: 'rgba(255, 255, 255, 0.08)',
+                confirmButtonText: 'Đồng ý xóa',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post("/Document/DeleteDocument", { documentId: id, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() }, function (res) {
+                        if (res.success) {
+                            Swal.fire({ icon: 'success', title: 'Đã xóa!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff' }).then(() => {
+                                selectChapter(selectedChapterId, $(".chapter-item.active")[0]);
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Lỗi!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff' });
+                        }
+                    });
+                }
+            });
+        }
+
+        // --- 4. RAG Indexing & Previews (AJAX) ---
+        function openIndexModal(id) {
+            $("#indexDocId").val(id);
+            var modal = new bootstrap.Modal(document.getElementById('indexDocModal'));
+            modal.show();
+        }
+
+        function runIndexDoc(e) {
+            e.preventDefault();
+            bootstrap.Modal.getInstance(document.getElementById('indexDocModal')).hide();
+            
+            Swal.fire({
+                title: 'Đang tiến hành lập chỉ mục RAG...',
+                html: 'Tiến hành phân nhỏ văn bản và nhúng vector vào kho lưu trữ...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            var formData = $("#indexDocForm").serialize();
+
+            $.post("/Document/IndexDocument", formData, function (res) {
+                Swal.close();
+                if (res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Lập chỉ mục hoàn tất!',
+                        text: res.message,
+                        background: 'rgba(13, 17, 28, 0.95)',
+                        color: '#fff',
+                        confirmButtonColor: '#6366f1'
+                    }).then(() => {
+                        selectChapter(selectedChapterId, $(".chapter-item.active")[0]);
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Lập chỉ mục thất bại!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff' });
+                }
+            });
+        }
+
+        // Preview Chunks Modal & AJAX
+        function openViewChunksModal(docId) {
+            // Load index versions dropdown
+            $("#indexVersionSelect").empty().html('<option>Đang tải...</option>');
+            $("#chunksListContainer").html('<div class="text-center text-muted-custom py-5"><div class="spinner-border text-glow mb-2" role="status"></div><div>Đang tải chỉ mục...</div></div>');
+
+            var modal = new bootstrap.Modal(document.getElementById('viewChunksModal'));
+            modal.show();
+
+            $.get("/Document/GetIndexes?documentId=" + docId, function (data) {
+                if (data.length === 0) {
+                    $("#indexVersionSelect").html('<option value="">Chưa có chỉ mục nào được lập</option>');
+                    $("#chunksListContainer").html('<div class="text-center text-muted-custom py-5"><i class="bi bi-box fs-1 mb-2 d-block"></i>Tài liệu này chưa từng lập chỉ mục RAG.</div>');
+                    return;
+                }
+
+                var html = "";
+                data.forEach(function (idx) {
+                    html += `<option value="${idx.indexId}">Chỉ mục #${idx.indexId} [${idx.modelName} | ${idx.strategyName} | Size:${idx.chunkSize} | Overlap:${idx.chunkOverlap}] - (${idx.createdAt})</option>`;
+                });
+                $("#indexVersionSelect").html(html);
+
+                // Load chunks for first option
+                loadChunksForSelectedVersion();
+            });
+        }
+
+        function loadChunksForSelectedVersion() {
+            var idxId = $("#indexVersionSelect").val();
+            if (!idxId) return;
+
+            $("#chunksListContainer").html('<div class="text-center text-muted-custom py-5"><div class="spinner-border text-glow mb-2" role="status"></div><div>Đang tải nội dung phân nhỏ...</div></div>');
+
+            $.get("/Document/GetChunks?indexId=" + idxId, function (data) {
+                if (data.length === 0) {
+                    $("#chunksListContainer").html('<div class="text-center text-muted-custom py-5"><i class="bi bi-exclamation-circle fs-1 mb-2 d-block"></i>Không tìm thấy dữ liệu phân nhỏ.</div>');
+                    return;
+                }
+
+                var html = "";
+                data.forEach(function (c) {
+                    html += `
+                        <div class="card p-3 mb-2 border border-white border-opacity-10 text-white bg-dark bg-opacity-50 hover-scale">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary bg-opacity-25 text-glow border border-primary border-opacity-10">Phân mảnh #${c.chunkOrder}</span>
+                                <span class="small text-muted-custom"><i class="bi bi-book"></i> Trang ${c.pageNumber} | <i class="bi bi-ticket-perforation"></i> Tokens ~${c.tokenCount}</span>
+                            </div>
+                            <div class="small font-monospace text-muted-custom text-white" style="line-height:1.4; white-space:pre-line;">${c.content}</div>
+                        </div>
+                    `;
+                });
+                $("#chunksListContainer").html(html);
+            });
+        }
+
+        // --- 5. Dynamic Help Notes for Embedding Models and Chunking Strategies ---
+        const modelNotes = {
+            "1": "💡 <b>Khuyên dùng cho học liệu kỹ thuật:</b> Mô hình đa ngôn ngữ cực tốt, độ chính xác tìm kiếm tiếng Việt và công thức MAS đạt trên 90%.",
+            "2": "💡 <b>Tốc độ & Chất lượng:</b> Mô hình của OpenAI có độ thông minh rất cao, phù hợp cho tài liệu tóm tắt lý thuyết dài.",
+            "3": "💡 <b>Thuần Việt (VinAI):</b> Tối ưu tốt nhất cho văn phạm tiếng Việt cổ điển, tài liệu văn học, luật pháp hoặc slide nhiều từ ngữ tiếng Việt.",
+            "4": "💡 <b>Thế hệ mới (BAAI):</b> Mô hình đa ngôn ngữ hàng đầu, hỗ trợ ngữ cảnh lớn, trích xuất sâu các khái niệm toán học phức tạp."
+        };
+
+        const strategyNotes = {
+            "1": "⚠️ <b>Fixed-Size (Kích thước cố định):</b> Chia đều theo ký tự. Nhanh nhưng <b>dễ cắt đôi từ/câu</b> (gây dính chữ, mất chữ ở rìa phân mảnh như bạn vừa thấy). Chỉ nên dùng cho từ vựng ngắn.",
+            "2": "🌟 <b>Paragraph (Theo đoạn văn - Khuyên dùng):</b> Tách theo hàng trống (\\n\\n). <b>Giữ nguyên vẹn ý nghĩa của đoạn lý thuyết</b>, tránh dính chữ hoàn hảo cho giáo trình.",
+            "3": "🌟 <b>Sentence (Theo câu văn):</b> Tách theo dấu chấm câu. Phù hợp nhất cho bộ câu hỏi ôn tập (Q&A) hoặc tài liệu tóm tắt ngắn gọn."
+        };
+
+        function updateHelpTexts() {
+            const selectedModelId = $("#indexModelSelect").val();
+            const selectedStrategyId = $("#indexStrategySelect").val();
+
+            if (modelNotes[selectedModelId]) {
+                $("#modelHelpText").html(modelNotes[selectedModelId]).fadeIn(150);
+            } else {
+                $("#modelHelpText").hide();
+            }
+
+            if (strategyNotes[selectedStrategyId]) {
+                $("#strategyHelpText").html(strategyNotes[selectedStrategyId]).fadeIn(150);
+            } else {
+                $("#strategyHelpText").hide();
+            }
+        }
+
+        // Attach listeners and initialize when modal is shown
+        $(document).ready(function() {
+            $("#indexModelSelect").on("change", updateHelpTexts);
+            $("#indexStrategySelect").on("change", updateHelpTexts);
+
+            // Trigger when modal is open
+            $('#indexDocModal').on('shown.bs.modal', function () {
+                updateHelpTexts();
+            });
+        });
+    </script>
+}

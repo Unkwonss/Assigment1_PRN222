@@ -1,0 +1,25 @@
+@{
+    ViewData["Title"] = "Từ chối truy cập";
+    Layout = "_Layout";
+}
+
+<div class="container d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 250px);">
+    <div class="text-center">
+        <div class="card-glass shadow-lg hover-scale p-5 d-inline-block" style="max-width: 450px;">
+            <div class="mb-4 text-danger">
+                <i class="bi bi-shield-slash-fill" style="font-size: 5rem; filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.4)); animate: pulse 2s infinite;"></i>
+            </div>
+            <h3 class="fw-bold text-white mb-2">Không Có Quyền Truy Cập</h3>
+            <p class="text-muted-custom mb-4">Bạn không có quyền hạn cần thiết để truy cập chức năng này. Vui lòng liên hệ với Quản trị hệ thống hoặc quay về trang chủ.</p>
+            
+            <div class="d-flex justify-content-center gap-3">
+                <a href="javascript:history.back()" class="btn btn-outline-glass d-flex align-items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Quay lại
+                </a>
+                <a asp-controller="Account" asp-action="Login" class="btn btn-glow-primary d-flex align-items-center gap-2">
+                    <i class="bi bi-house"></i> Về trang chủ
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

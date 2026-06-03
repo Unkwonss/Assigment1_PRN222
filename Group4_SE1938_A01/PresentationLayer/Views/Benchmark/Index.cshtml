@@ -1,0 +1,839 @@
+@model IEnumerable<BusinessLayer.DTOs.ExperimentDto>
+
+@{
+    ViewData["Title"] = "Research Benchmarking & Analytics";
+    Layout = "_Layout";
+    var subjects = ViewBag.Subjects as IEnumerable<BusinessLayer.DTOs.SubjectDto> ?? new List<BusinessLayer.DTOs.SubjectDto>();
+    var aiModels = ViewBag.AIModels as IEnumerable<BusinessLayer.DTOs.AimodelDto> ?? new List<BusinessLayer.DTOs.AimodelDto>();
+    var embeddingModels = ViewBag.EmbeddingModels as IEnumerable<BusinessLayer.DTOs.EmbeddingModelDto> ?? new List<BusinessLayer.DTOs.EmbeddingModelDto>();
+    var strategies = ViewBag.Strategies as IEnumerable<BusinessLayer.DTOs.ChunkingStrategyDto> ?? new List<BusinessLayer.DTOs.ChunkingStrategyDto>();
+}
+
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+        <div>
+            <h2 class="card-title-gradient mb-1">
+                <i class="bi bi-bar-chart-line-fill text-glow"></i> Phân tích Thử nghiệm & RAGAS Benchmarks
+            </h2>
+            <p class="text-muted-custom mb-0">Thiết lập tham số thử nghiệm, biên soạn bộ câu hỏi chuẩn (Test Sets) và đánh giá độ chính xác RAG vs Fine-tuning.</p>
+        </div>
+        
+        <div class="d-inline-flex gap-2">
+            <button class="btn btn-outline-glass d-flex align-items-center gap-2" onclick="openTestSetManagerModal()">
+                <i class="bi bi-patch-question-fill text-glow"></i> Quản lý bộ câu hỏi chuẩn
+            </button>
+            <button class="btn btn-glow-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createExperimentModal">
+                <i class="bi bi-plus-lg"></i> Thiết lập thử nghiệm mới
+            </button>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công!',
+                text: '@Html.Raw(TempData["Success"])',
+                background: 'rgba(13, 17, 28, 0.95)',
+                color: '#fff',
+                confirmButtonColor: '#6366f1'
+            });
+        </script>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <script>
+            Swal.fire({
+                icon: 'error',
+                title: 'Thất bại!',
+                text: '@Html.Raw(TempData["Error"])',
+                background: 'rgba(13, 17, 28, 0.95)',
+                color: '#fff',
+                confirmButtonColor: '#ef4444'
+            });
+        </script>
+    }
+
+    <div class="row g-4">
+        <!-- 1. LEFT PANEL: EXPERIMENTS MASTER LIST -->
+        <div class="col-lg-4">
+            <div class="card-glass h-100 p-4">
+                <h5 class="fw-bold text-glow border-bottom border-white border-opacity-10 pb-2 mb-3">
+                    <i class="bi bi-folder2-open"></i> Các cấu hình thử nghiệm
+                </h5>
+                
+                <div class="list-group list-group-flush gap-2" id="experimentList">
+                    @foreach (var exp in Model)
+                    {
+                        <div class="session-item d-flex flex-column align-items-start gap-1 exp-item" data-id="@exp.ExperimentId" data-name="@exp.ExperimentName" onclick="selectExperiment(@exp.ExperimentId, this)">
+                            <div class="d-flex justify-content-between align-items-center w-100">
+                                <span class="fw-bold text-white fs-6">@exp.ExperimentName</span>
+                                <button class="btn btn-link text-danger p-0" onclick="event.stopPropagation(); confirmDeleteExperiment(@exp.ExperimentId, '@exp.ExperimentName')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            <div class="small text-muted-custom font-monospace" style="font-size:0.75rem;">
+                                LLM: <strong class="text-glow">@(exp.Aimodel?.ModelName ?? "N/A")</strong> (@(exp.Aimodel?.ModelType ?? "N/A"))
+                            </div>
+                            
+                            @if (exp.Aimodel?.ModelType == "Base-RAG")
+                            {
+                                <div class="small text-muted-custom" style="font-size:0.7rem; line-height:1.2;">
+                                    Vector: @(exp.EmbeddingModel?.ModelName ?? "N/A")<br/>
+                                    Strategy: @(exp.Strategy?.StrategyName ?? "N/A") (Size: @(exp.ChunkSize), Overlap: @(exp.ChunkOverlap))
+                                </div>
+                            }
+                            
+                            <div class="d-flex w-100 justify-content-between align-items-center mt-2 pt-2 border-top border-white border-opacity-5">
+                                <span class="small text-muted-custom" style="font-size:0.7rem;">ID: #@exp.ExperimentId</span>
+                                <button class="btn btn-sm btn-glow-primary py-1 px-2 d-flex align-items-center gap-1" onclick="event.stopPropagation(); triggerRunBenchmark(@exp.ExperimentId, '@exp.ExperimentName')" style="font-size:0.75rem;">
+                                    <i class="bi bi-play-fill"></i> Đánh giá
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. RIGHT PANEL: ANALYTICS & VISUAL DASHBOARD -->
+        <div class="col-lg-8">
+            <!-- Placeholder -->
+            <div class="card-glass h-100 p-5 d-flex align-items-center justify-content-center border border-dashed border-white border-opacity-10 rounded-3" id="analyticsPlaceholder">
+                <div class="text-center text-muted-custom" style="max-width: 400px;">
+                    <i class="bi bi-bar-chart-line fs-1 text-glow mb-3 d-block"></i>
+                    <h5 class="text-white fw-bold">Bảng Phân Tích Hiệu Năng & Độ Chính Xác</h5>
+                    <p class="small">Lựa chọn cấu hình thử nghiệm ở cột bên trái để hiển thị biểu đồ so sánh chi tiết các chỉ số RAGAS (Faithfulness, Relevance), độ trễ (latency) và chi phí thẻ mã hóa (tokens).</p>
+                </div>
+            </div>
+
+            <!-- Analytics Dashboard -->
+            <div class="d-none" id="analyticsDashboard">
+                <div class="row g-3 mb-4">
+                    <!-- Stat 1 -->
+                    <div class="col-md-3 col-6">
+                        <div class="card-glass p-3 text-center" style="background: rgba(99, 102, 241, 0.05); border-color: rgba(99, 102, 241, 0.2) !important;">
+                            <div class="small text-muted-custom mb-1">Faithfulness</div>
+                            <h3 class="fw-bold text-glow text-white mb-0" id="avgFaithfulness">0.0</h3>
+                        </div>
+                    </div>
+                    <!-- Stat 2 -->
+                    <div class="col-md-3 col-6">
+                        <div class="card-glass p-3 text-center" style="background: rgba(168, 85, 247, 0.05); border-color: rgba(168, 85, 247, 0.2) !important;">
+                            <div class="small text-muted-custom mb-1">Answer Relevance</div>
+                            <h3 class="fw-bold text-white mb-0" style="color: #c084fc !important; text-shadow: 0 0 8px rgba(192, 132, 252, 0.6);" id="avgRelevance">0.0</h3>
+                        </div>
+                    </div>
+                    <!-- Stat 3 -->
+                    <div class="col-md-3 col-6">
+                        <div class="card-glass p-3 text-center" style="background: rgba(6, 182, 212, 0.05); border-color: rgba(6, 182, 212, 0.2) !important;">
+                            <div class="small text-muted-custom mb-1">Avg Latency</div>
+                            <h3 class="fw-bold text-white mb-0" style="color: #22d3ee !important; text-shadow: 0 0 8px rgba(34, 211, 238, 0.6);" id="avgLatency">0ms</h3>
+                        </div>
+                    </div>
+                    <!-- Stat 4 -->
+                    <div class="col-md-3 col-6">
+                        <div class="card-glass p-3 text-center" style="background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2) !important;">
+                            <div class="small text-muted-custom mb-1">Context Precision</div>
+                            <h3 class="fw-bold text-white mb-0" style="color: #34d399 !important; text-shadow: 0 0 8px rgba(52, 211, 153, 0.6);" id="avgPrecision">0.0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="card-glass p-3">
+                            <h6 class="fw-bold text-white text-glow mb-3"><i class="bi bi-radar"></i> Radar so sánh chỉ số RAGAS</h6>
+                            <div style="height: 250px; position: relative;">
+                                <canvas id="radarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card-glass p-3">
+                            <h6 class="fw-bold text-white text-glow mb-3"><i class="bi bi-lightning-charge-fill"></i> Biểu đồ Độ Trễ & Token</h6>
+                            <div style="height: 250px; position: relative;">
+                                <canvas id="barChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Factual Comparison Grid -->
+                <div class="card-glass p-0 overflow-hidden shadow-lg mb-4">
+                    <div class="p-3 border-bottom border-white border-opacity-10 d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold text-white text-glow mb-0"><i class="bi bi-table"></i> So sánh câu trả lời thực tế & Chỉ số câu hỏi</h6>
+                    </div>
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-glass mb-0" style="font-size:0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th>Câu hỏi</th>
+                                    <th>Độ trễ</th>
+                                    <th>Faithfulness</th>
+                                    <th>Relevance</th>
+                                    <th>Precision</th>
+                                    <th>Recall</th>
+                                    <th class="text-end">Chi tiết</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody">
+                                <!-- Loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     MODAL POPUPS (Strictly Complies with Popup Dialogs)
+     ========================================================= -->
+
+<!-- 1. Create Experiment Modal -->
+<div class="modal fade" id="createExperimentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-plus-square-fill"></i> Thiết lập thử nghiệm nghiên cứu mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CreateExperiment" method="post" onsubmit="toggleEmbeddingRequired(this)">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Tên thử nghiệm (Name)</label>
+                        <input type="text" name="experimentName" class="form-control form-glass" placeholder="Ví dụ: RAG gpt-4o Sentence-PhoBERT" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Mô tả (Description)</label>
+                        <input type="text" name="experimentDescription" class="form-control form-glass" placeholder="Mô tả cấu hình thử nghiệm..." />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Mô hình AI (LLM Model)</label>
+                        <select name="aiModelId" id="modelSelectInput" class="form-select form-glass" onchange="adjustModelConfig()" required>
+                            @foreach (var m in aiModels)
+                            {
+                                <option value="@m.ModelId" data-type="@m.ModelType">@m.ModelName (@m.ModelType)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Configs specific to Base-RAG -->
+                    <div id="ragSpecificConfigs">
+                        <div class="mb-3">
+                            <label class="form-label text-muted-custom">Mô hình nhúng (Embedding Model)</label>
+                            <select name="embeddingModelId" class="form-select form-glass">
+                                @foreach (var m in embeddingModels)
+                                {
+                                    <option value="@m.ModelId">@m.ModelName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted-custom">Chiến lược phân nhỏ (Chunk Strategy)</label>
+                            <select name="strategyId" class="form-select form-glass">
+                                @foreach (var s in strategies)
+                                {
+                                    <option value="@s.StrategyId">@s.StrategyName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label text-muted-custom">Chunk Size</label>
+                                <input type="number" name="chunkSize" class="form-control form-glass" value="500" min="100" max="2000" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label text-muted-custom">Chunk Overlap</label>
+                                <input type="number" name="chunkOverlap" class="form-control form-glass" value="100" min="0" max="500" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-glow-primary">Lưu cấu hình</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Experiment Delete Form -->
+<form id="deleteExpForm" asp-action="DeleteExperiment" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="experimentId" id="deleteExpId" />
+</form>
+
+<!-- 2. Select Subject for Evaluation Modal -->
+<div class="modal fade" id="runEvalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-play-circle-fill"></i> Chọn bộ môn học kiểm thử</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="runEvalForm" onsubmit="executeEval(event)">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="experimentId" id="evalExpId" />
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Lựa chọn bộ môn học kiểm thử (Subject)</label>
+                        <select name="subjectId" class="form-select form-glass" required>
+                            @foreach (var sub in subjects)
+                            {
+                                <option value="@sub.SubjectId">@sub.SubjectCode - @sub.SubjectName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-glow-primary">Chạy RBL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 3. RBL Test Sets Dashboard Modal Popup -->
+<div class="modal fade" id="testSetManagerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-patch-question-fill"></i> Quản lý bộ câu hỏi chuẩn (Test Sets)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-5">
+                        <label class="form-label text-muted-custom small">Chọn bộ môn học</label>
+                        <select id="testSetSubjectSelect" class="form-select form-glass" onchange="loadTestSetsForSelectedSubject()">
+                            <option value="">-- Chọn môn học --</option>
+                            @foreach (var sub in subjects)
+                            {
+                                <option value="@sub.SubjectId">@sub.SubjectCode - @sub.SubjectName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-7 d-flex align-items-end justify-content-md-end">
+                        <button class="btn btn-glow-primary py-2 px-3 d-none" id="btnAddNewQuestion" onclick="openCreateQuestionForm()">
+                            <i class="bi bi-plus-lg"></i> Thêm câu hỏi chuẩn
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Create/Edit Question mini-form panel inside modal (frosted glass) -->
+                <div class="card-glass border-white border-opacity-10 p-3 mb-4 d-none" id="questionFormPanel" style="background: rgba(99,102,241,0.02);">
+                    <h6 class="fw-bold text-glow text-white mb-2" id="questionFormTitle">Thêm câu hỏi chuẩn mới</h6>
+                    <form id="questionForm" onsubmit="saveTestSetQuestion(event)">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="questionId" id="modalQuestionId" />
+                        <div class="mb-2">
+                            <label class="form-label text-muted-custom small">Câu hỏi (Question)</label>
+                            <input type="text" name="question" id="modalQuestionText" class="form-control form-glass py-1" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted-custom small">Đáp án chuẩn (Ground Truth)</label>
+                            <textarea name="groundTruth" id="modalGroundTruth" class="form-control form-glass py-1" rows="2" required></textarea>
+                        </div>
+                        <div class="d-inline-flex gap-2">
+                            <button type="submit" class="btn btn-sm btn-glow-primary py-1 px-3">Lưu lại</button>
+                            <button type="button" class="btn btn-sm btn-outline-glass py-1 px-3" onclick="closeQuestionFormPanel()">Hủy</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Scrollable list of test questions -->
+                <div class="table-responsive border border-white border-opacity-10 rounded-3 p-3 overflow-auto bg-dark bg-opacity-25" style="max-height: 320px;" id="testSetTableContainer">
+                    <div class="text-center text-muted-custom py-5" id="testSetPlaceholder">
+                        <i class="bi bi-patch-question fs-1 mb-2 d-block"></i>
+                        Vui lòng chọn môn học để quản lý danh sách câu hỏi
+                    </div>
+                    
+                    <table class="table table-glass d-none" id="testSetTable" style="font-size:0.8rem;">
+                        <thead>
+                            <tr>
+                                <th>Câu hỏi</th>
+                                <th>Đáp án chuẩn</th>
+                                <th class="text-end" style="width:120px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="testSetTableBody">
+                            <!-- Populated via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-glass">
+                <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Response Details Modal -->
+<div class="modal fade" id="responseDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-journal-text"></i> Chi tiết so sánh chất lượng phản hồi</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label text-glow fw-bold">Câu hỏi học viên (Question):</label>
+                    <div class="p-3 border border-white border-opacity-10 rounded bg-dark bg-opacity-25" id="detailQuestion"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-glow fw-bold">Đáp án chuẩn (Ground Truth):</label>
+                    <div class="p-3 border border-white border-opacity-10 rounded bg-dark bg-opacity-25" id="detailGroundTruth"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-glow fw-bold">Câu trả lời mô hình sinh (Model Response):</label>
+                    <div class="p-3 border border-white border-opacity-10 rounded bg-dark bg-opacity-25" id="detailResponse" style="white-space:pre-line;"></div>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-glass">
+                <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var selectedExperimentId = 0;
+        var radarChartInstance = null;
+        var barChartInstance = null;
+
+        // Toggle Embedding Model selection for RAG vs Fine-tune models
+        function adjustModelConfig() {
+            var selectedType = $("#modelSelectInput option:selected").data("type");
+            if (selectedType === "Fine-tuned") {
+                $("#ragSpecificConfigs").slideUp();
+            } else {
+                $("#ragSpecificConfigs").slideDown();
+            }
+        }
+
+        function toggleEmbeddingRequired(form) {
+            // Fine-tuned models don't require embeddings
+            var selectedType = $("#modelSelectInput option:selected").data("type");
+            if (selectedType === "Fine-tuned") {
+                $(form).find("[name='embeddingModelId']").val("");
+                $(form).find("[name='strategyId']").val("");
+                $(form).find("[name='chunkSize']").val("");
+                $(form).find("[name='chunkOverlap']").val("");
+            }
+        }
+
+        function confirmDeleteExperiment(id, name) {
+            Swal.fire({
+                title: 'Xác nhận xóa thử nghiệm?',
+                text: "Toàn bộ cấu hình '" + name + "' và lịch sử các kết quả đánh giá (RAGAS) liên quan sẽ bị xóa vĩnh viễn!",
+                icon: 'warning',
+                showCancelButton: true,
+                background: 'rgba(13, 17, 28, 0.95)',
+                color: '#fff',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: 'rgba(255, 255, 255, 0.08)',
+                confirmButtonText: 'Đồng ý xóa',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $("#deleteExpId").val(id);
+                    $("#deleteExpForm").submit();
+                }
+            });
+        }
+
+        // --- 1. Select Experiment to load Analytics ---
+        function selectExperiment(id, elem) {
+            selectedExperimentId = id;
+            
+            // Highlight selected
+            $("#experimentList .session-item").removeClass("active");
+            $(elem).addClass("active");
+
+            // Reset placeholders
+            $("#analyticsPlaceholder").addClass("d-none");
+            $("#analyticsDashboard").removeClass("d-none");
+
+            // Load results
+            loadExperimentDashboardData(id);
+        }
+
+        function loadExperimentDashboardData(expId) {
+            $.get("/Benchmark/GetBenchmarkResults?experimentId=" + expId, function (data) {
+                var tbody = $("#resultsTableBody");
+                tbody.empty();
+
+                if (data.length === 0) {
+                    tbody.html('<tr><td colspan="7" class="text-center text-muted-custom py-4">Thử nghiệm này chưa chạy bộ đánh giá kiểm thử nào. Nhấp nút "Đánh giá" ở thanh bên để khởi chạy!</td></tr>');
+                    // Reset stats & charts
+                    updateStatsCards(0, 0, 0, 0);
+                    renderRadarChart([0,0,0,0]);
+                    renderBarChart([], [], []);
+                    return;
+                }
+
+                // Compute averages
+                var totalF = 0, totalR = 0, totalP = 0, totalRec = 0, totalLat = 0;
+                var chartLabels = [];
+                var chartLatencies = [];
+                var chartTokens = [];
+
+                data.forEach(function (r, index) {
+                    totalF += r.faithfulness;
+                    totalR += r.relevance;
+                    totalP += r.precision;
+                    totalRec += r.recall;
+                    totalLat += r.latencyMilliseconds;
+
+                    chartLabels.push("Q" + (index + 1));
+                    chartLatencies.push(r.latencyMilliseconds);
+                    chartTokens.push(r.tokensIn + r.tokensOut);
+
+                    // Append row
+                    var rowHtml = `
+                        <tr>
+                            <td><span class="text-white fw-bold d-block text-truncate" style="max-width:200px;" title="${r.questionText}">${r.questionText}</span></td>
+                            <td><code class="text-glow text-opacity-75">${r.latencyMilliseconds}ms</code></td>
+                            <td><span class="badge bg-primary bg-opacity-15 text-glow">${r.faithfulness}</span></td>
+                            <td><span class="badge bg-secondary bg-opacity-15 text-glow" style="color:#d8b4fe !important;">${r.relevance}</span></td>
+                            <td><span class="badge bg-info bg-opacity-15 text-glow" style="color:#22d3ee !important;">${r.precision}</span></td>
+                            <td><span class="badge bg-success bg-opacity-15 text-glow" style="color:#34d399 !important;">${r.recall}</span></td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-glass py-0 px-2" onclick="openDetailsModal('${escapeQuotes(r.questionText)}', '${escapeQuotes(r.groundTruthText)}', '${escapeQuotes(r.generatedResponse)}')">
+                                    <i class="bi bi-file-text"></i> Xem
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.append(rowHtml);
+                });
+
+                var count = data.length;
+                var avgF = totalF / count;
+                var avgR = totalR / count;
+                var avgP = totalP / count;
+                var avgRec = totalRec / count;
+                var avgLat = totalLat / count;
+
+                updateStatsCards(avgF, avgR, avgLat, avgP);
+                renderRadarChart([avgF, avgR, avgP, avgRec]);
+                renderBarChart(chartLabels, chartLatencies, chartTokens);
+            });
+        }
+
+        function updateStatsCards(f, r, lat, p) {
+            $("#avgFaithfulness").text(f.toFixed(2));
+            $("#avgRelevance").text(r.toFixed(2));
+            $("#avgLatency").text(Math.round(lat) + "ms");
+            $("#avgPrecision").text(p.toFixed(2));
+        }
+
+        // --- 2. Chart Renderers ---
+        function renderRadarChart(scores) {
+            var ctx = document.getElementById('radarChart').getContext('2d');
+            
+            if (radarChartInstance) {
+                radarChartInstance.destroy();
+            }
+
+            radarChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Faithfulness', 'Answer Relevance', 'Context Precision', 'Context Recall'],
+                    datasets: [{
+                        label: 'Chỉ số chất lượng',
+                        data: scores,
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        borderColor: '#6366f1',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#a855f7',
+                        pointBorderColor: '#fff',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255,255,255,0.08)' },
+                            grid: { color: 'rgba(255,255,255,0.08)' },
+                            pointLabels: { color: '#9ca3af', font: { family: 'Outfit', size: 10 } },
+                            ticks: { display: false },
+                            min: 0,
+                            max: 1
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function renderBarChart(labels, latencies, tokens) {
+            var ctx = document.getElementById('barChart').getContext('2d');
+            
+            if (barChartInstance) {
+                barChartInstance.destroy();
+            }
+
+            barChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Độ trễ (ms)',
+                            data: latencies,
+                            backgroundColor: 'rgba(6, 182, 212, 0.4)',
+                            borderColor: '#06b6d4',
+                            borderWidth: 1,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Số Tokens',
+                            data: tokens,
+                            backgroundColor: 'rgba(168, 85, 247, 0.4)',
+                            borderColor: '#a855f7',
+                            borderWidth: 1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#9ca3af', font: { family: 'Outfit' } },
+                            title: { display: true, text: 'Độ trễ (ms)', color: '#06b6d4' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: '#9ca3af', font: { family: 'Outfit' } },
+                            title: { display: true, text: 'Tokens', color: '#a855f7' }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#fff', font: { family: 'Outfit' } } }
+                    }
+                }
+            });
+        }
+
+        // --- 3. Execute Benchmark RBL via AJAX ---
+        function triggerRunBenchmark(expId, expName) {
+            $("#evalExpId").val(expId);
+            var modal = new bootstrap.Modal(document.getElementById('runEvalModal'));
+            modal.show();
+        }
+
+        function executeEval(e) {
+            e.preventDefault();
+            bootstrap.Modal.getInstance(document.getElementById('runEvalModal')).hide();
+
+            Swal.fire({
+                title: 'Đang tiến hành đánh giá RBL...',
+                html: 'Hệ thống đang chạy qua bộ test câu hỏi và chấm điểm RAGAS...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            var formData = $("#runEvalForm").serialize();
+
+            $.post("/Benchmark/RunBenchmark", formData, function (res) {
+                Swal.close();
+                if (res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Đánh giá hoàn tất!',
+                        text: res.message,
+                        background: 'rgba(13, 17, 28, 0.95)',
+                        color: '#fff',
+                        confirmButtonColor: '#6366f1'
+                    }).then(() => {
+                        var expId = $("#evalExpId").val();
+                        // Refresh active experiment dashboard
+                        $(`#experimentList .exp-item[data-id="${expId}"]`).click();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Thất bại!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff' });
+                }
+            });
+        }
+
+        // Details Comparer
+        function openDetailsModal(q, gt, r) {
+            $("#detailQuestion").text(q);
+            $("#detailGroundTruth").text(gt);
+            $("#detailResponse").text(r);
+            
+            var modal = new bootstrap.Modal(document.getElementById('responseDetailsModal'));
+            modal.show();
+        }
+
+        // --- 4. Test Set Question Management Popup CRUD ---
+        function openTestSetManagerModal() {
+            $("#testSetSubjectSelect").val("");
+            $("#btnAddNewQuestion").addClass("d-none");
+            $("#questionFormPanel").addClass("d-none");
+            $("#testSetTable").addClass("d-none");
+            $("#testSetPlaceholder").removeClass("d-none").html('<i class="bi bi-patch-question fs-1 mb-2 d-block"></i>Vui lòng chọn môn học để quản lý danh sách câu hỏi');
+
+            var modal = new bootstrap.Modal(document.getElementById('testSetManagerModal'));
+            modal.show();
+        }
+
+        function loadTestSetsForSelectedSubject() {
+            var subId = $("#testSetSubjectSelect").val();
+            if (!subId) {
+                $("#btnAddNewQuestion").addClass("d-none");
+                $("#questionFormPanel").addClass("d-none");
+                $("#testSetTable").addClass("d-none");
+                $("#testSetPlaceholder").removeClass("d-none");
+                return;
+            }
+
+            $("#testSetPlaceholder").addClass("d-none");
+            $("#btnAddNewQuestion").removeClass("d-none");
+            $("#testSetTable").removeClass("d-none");
+            $("#testSetTableBody").html('<tr><td colspan="3" class="text-center text-muted-custom py-4"><div class="spinner-border text-glow spinner-border-sm" role="status"></div> Đang tải dữ liệu...</td></tr>');
+
+            $.get("/Benchmark/GetTestSets?subjectId=" + subId, function (data) {
+                var tbody = $("#testSetTableBody");
+                tbody.empty();
+
+                if (data.length === 0) {
+                    tbody.html('<tr><td colspan="3" class="text-center text-muted-custom py-4">Môn học này chưa cấu hình câu hỏi chuẩn nào. Nhấp nút thêm để bắt đầu!</td></tr>');
+                    return;
+                }
+
+                data.forEach(function (ts) {
+                    var html = `
+                        <tr>
+                            <td><strong class="text-white">${escapeHtml(ts.question)}</strong></td>
+                            <td><span class="text-muted-custom">${escapeHtml(ts.groundTruth)}</span></td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-glass py-0 px-2" onclick="openEditQuestionForm(${ts.questionId}, '${escapeQuotes(ts.question)}', '${escapeQuotes(ts.groundTruth)}')">Sửa</button>
+                                    <button class="btn btn-sm btn-logout py-0 px-2" onclick="confirmDeleteQuestion(${ts.questionId})">Xóa</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.append(html);
+                });
+            });
+        }
+
+        function openCreateQuestionForm() {
+            $("#questionFormPanel").removeClass("d-none");
+            $("#questionFormTitle").text("Thêm câu hỏi chuẩn mới");
+            $("#modalQuestionId").val("");
+            $("#modalQuestionText").val("");
+            $("#modalGroundTruth").val("");
+        }
+
+        function openEditQuestionForm(id, q, gt) {
+            $("#questionFormPanel").removeClass("d-none");
+            $("#questionFormTitle").text("Chỉnh sửa câu hỏi chuẩn #" + id);
+            $("#modalQuestionId").val(id);
+            $("#modalQuestionText").val(q);
+            $("#modalGroundTruth").val(gt);
+        }
+
+        function closeQuestionFormPanel() {
+            $("#questionFormPanel").addClass("d-none");
+        }
+
+        function saveTestSetQuestion(e) {
+            e.preventDefault();
+            var id = $("#modalQuestionId").val();
+            var url = id === "" ? "/Benchmark/CreateTestSet" : "/Benchmark/EditTestSet";
+            
+            var formData = {
+                questionId: id,
+                subjectId: $("#testSetSubjectSelect").val(),
+                question: $("#modalQuestionText").val(),
+                groundTruth: $("#modalGroundTruth").val(),
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            };
+
+            $.post(url, formData, function (res) {
+                if (res.success) {
+                    closeQuestionFormPanel();
+                    Swal.fire({ icon: 'success', title: 'Thành công!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff', confirmButtonColor: '#6366f1' }).then(() => {
+                        loadTestSetsForSelectedSubject();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Thất bại!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff' });
+                }
+            });
+        }
+
+        function confirmDeleteQuestion(id) {
+            Swal.fire({
+                title: 'Xác nhận xóa câu hỏi?',
+                text: "Câu hỏi này sẽ bị xóa khỏi bộ test chuẩn của môn học!",
+                icon: 'warning',
+                showCancelButton: true,
+                background: 'rgba(13, 17, 28, 0.95)',
+                color: '#fff',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: 'rgba(255, 255, 255, 0.08)',
+                confirmButtonText: 'Đồng ý xóa',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post("/Benchmark/DeleteTestSet", { questionId: id, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() }, function (res) {
+                        if (res.success) {
+                            Swal.fire({ icon: 'success', title: 'Đã xóa!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff' }).then(() => {
+                                loadTestSetsForSelectedSubject();
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Lỗi!', text: res.message, background: 'rgba(13, 17, 28, 0.95)', color: '#fff' });
+                        }
+                    });
+                }
+            });
+        }
+
+        // Helper string escapes
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function escapeQuotes(str) {
+            if (!str) return "";
+            return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+    </script>
+}

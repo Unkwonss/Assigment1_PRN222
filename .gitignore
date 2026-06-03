@@ -1,0 +1,50 @@
+# .gitignore cho VietRAG — .NET Solution
+
+# ── Build outputs ──────────────────────────────────
+bin/
+obj/
+publish/
+
+# ── Visual Studio / Rider ──────────────────────────
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.idea/
+*.DotSettings.user
+
+# ── Config nhạy cảm — KHÔNG push API key lên GitHub ─
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/appsettings.Staging.json
+# Giữ lại appsettings.json mẫu (đã xóa key thật)
+
+# ── Database files ─────────────────────────────────
+*.mdf
+*.ldf
+*.ndf
+
+# ── Uploads (tài liệu người dùng upload) ──────────
+**/wwwroot/uploads/
+
+# ── NuGet ──────────────────────────────────────────
+*.nupkg
+**/packages/
+!**/packages/repositories.config
+.nuget/
+
+# ── Logs ───────────────────────────────────────────
+*.log
+logs/
+
+# ── OS files ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Test results ───────────────────────────────────
+TestResults/
+*.trx
+coverage/

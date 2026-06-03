@@ -1,0 +1,293 @@
+@model PresentationLayer.Models.LoginViewModel
+
+@{
+    ViewData["Title"] = "Đăng nhập";
+    Layout = "_Layout";
+
+    var authError = ViewData.ModelState.ContainsKey(string.Empty)
+        ? ViewData.ModelState[string.Empty]?.Errors.FirstOrDefault()?.ErrorMessage
+        : null;
+
+    var emailServerErr = ViewData.ModelState.ContainsKey("Email")
+        ? ViewData.ModelState["Email"]?.Errors.FirstOrDefault()?.ErrorMessage
+        : null;
+}
+
+<div class="container d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 250px);">
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            <div class="card-glass hover-scale shadow-lg">
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex brand-logo-glow mb-3">
+                        <i class="bi bi-cpu-fill fs-2 text-glow"></i>
+                    </div>
+                    <h3 class="card-title-gradient justify-content-center mb-1">Chào mừng quay lại</h3>
+                    <p class="text-muted-custom">Hệ thống RAG Chatbot &amp; Research Benchmark</p>
+                </div>
+
+                @if (TempData["Success"] != null)
+                {
+                    <div class="d-flex align-items-center gap-2 mb-4 p-3"
+                         style="background: rgba(25,135,84,0.18); border: 1px solid rgba(25,135,84,0.45); border-radius: 10px;">
+                        <i class="bi bi-check-circle-fill flex-shrink-0" style="color: #6ee7b7;"></i>
+                        <span style="color: #d1fae5; font-size: 0.9rem;">@TempData["Success"]</span>
+                    </div>
+                }
+
+                <form asp-controller="Account" asp-action="Login" method="post" autocomplete="off" id="loginForm" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    @* Email field *@
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label text-muted-custom"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-blur border-end-0 border-white border-opacity-10 text-muted-custom"
+                                  style="border-radius: 8px 0 0 8px;">
+                                <i class="bi bi-envelope"></i>
+                            </span>
+                            <input asp-for="Email" type="email"
+                                   class="form-control form-glass border-start-0"
+                                   style="border-radius: 0 8px 8px 0; background: rgba(8,10,15,0.5) !important; color: #fff !important;"
+                                   placeholder="name@domain.com"
+                                   id="loginEmail"
+                                   autocomplete="username" />
+                        </div>
+                        @* Client-side error placeholder *@
+                        <div id="emailError" class="mt-1" style="display:none;">
+                            <span style="color:#ff6b6b; font-size:0.82rem;">
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                <span id="emailErrorMsg"></span>
+                            </span>
+                        </div>
+                        @* Server-side field error *@
+                        @if (!string.IsNullOrEmpty(emailServerErr))
+                        {
+                            <div class="mt-1">
+                                <span style="color:#ff6b6b; font-size:0.82rem;">
+                                    <i class="bi bi-exclamation-circle me-1"></i>@emailServerErr
+                                </span>
+                            </div>
+                        }
+                    </div>
+
+                    @* Password field *@
+                    <div class="mb-4">
+                        <label asp-for="Password" class="form-label text-muted-custom"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-blur border-end-0 border-white border-opacity-10 text-muted-custom"
+                                  style="border-radius: 8px 0 0 8px;">
+                                <i class="bi bi-lock"></i>
+                            </span>
+                            <input asp-for="Password" type="password"
+                                   class="form-control form-glass border-start-0"
+                                   style="border-radius: 0 8px 8px 0; background: rgba(8,10,15,0.5) !important; color: #fff !important;"
+                                   placeholder="••••••••"
+                                   id="loginPassword"
+                                   autocomplete="current-password" />
+                            <button class="btn btn-outline-secondary bg-blur border-white border-opacity-10"
+                                    type="button"
+                                    onclick="togglePassword('loginPassword', this)"
+                                    style="border-radius: 0 8px 8px 0;">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+
+                        @* Client-side "required" error *@
+                        <div id="passwordError" class="mt-1" style="display:none;">
+                            <span style="color:#ff6b6b; font-size:0.82rem;">
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                <span id="passwordErrorMsg"></span>
+                            </span>
+                        </div>
+
+                        @* Server-side auth error (sai email/mật khẩu) — hiện ngay dưới ô password *@
+                        @if (!string.IsNullOrEmpty(authError))
+                        {
+                            <div class="mt-2 d-flex align-items-center gap-2 p-2"
+                                 style="background:rgba(220,53,69,0.15); border:1px solid rgba(220,53,69,0.4); border-radius:8px;">
+                                <i class="bi bi-x-circle-fill flex-shrink-0" style="color:#ff6b6b;"></i>
+                                <span style="color:#ffcdd2; font-size:0.85rem; font-weight:500;">@authError</span>
+                            </div>
+                        }
+                    </div>
+
+                    <button type="submit"
+                            class="btn btn-glow-primary w-100 py-2 d-flex align-items-center justify-content-center gap-2 mb-3"
+                            id="loginSubmitBtn">
+                        <i class="bi bi-box-arrow-in-right"></i> Đăng nhập
+                    </button>
+
+                    @*
+                    <div class="text-center">
+                        <span class="text-muted-custom">Chưa có tài khoản? </span>
+                        <a asp-controller="Account" asp-action="Register" class="text-glow text-decoration-none fw-semibold">Đăng ký ngay</a>
+                    </div>
+                    *@
+                </form>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Toggle show/hide password
+        function togglePassword(inputId, btn) {
+            var input = document.getElementById(inputId);
+            var icon = btn.querySelector('i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'bi bi-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'bi bi-eye';
+            }
+        }
+
+        // Reset button state mỗi lần page load / reload
+        window.addEventListener('pageshow', function () {
+            var btn = document.getElementById('loginSubmitBtn');
+
+            if (btn) {
+                btn.disabled = false;
+
+                btn.innerHTML =
+                    '<i class="bi bi-box-arrow-in-right"></i> Đăng nhập';
+            }
+        });
+
+        // Nếu server trả lỗi → clear password
+        var hasServerError = @((!ViewData.ModelState.IsValid).ToString().ToLower());
+
+        if (hasServerError) {
+            var pwdField = document.getElementById('loginPassword');
+
+            if (pwdField) {
+                pwdField.value = '';
+            }
+        }
+
+        // Client-side validation + loading spinner
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+
+            var email = document.getElementById('loginEmail');
+            var password = document.getElementById('loginPassword');
+            var btn = document.getElementById('loginSubmitBtn');
+
+            var valid = true;
+
+            hideError('emailError');
+            hideError('passwordError');
+
+            // Validate email
+            if (!email.value.trim()) {
+
+                showError(
+                    'emailError',
+                    'emailErrorMsg',
+                    'Vui lòng nhập email.'
+                );
+
+                valid = false;
+            }
+            else if (!/^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/.test(email.value.trim())) {
+
+                showError(
+                    'emailError',
+                    'emailErrorMsg',
+                    'Email không đúng định dạng.'
+                );
+
+                valid = false;
+            }
+
+            // Validate password
+            if (!password.value.trim()) {
+
+                showError(
+                    'passwordError',
+                    'passwordErrorMsg',
+                    'Vui lòng nhập mật khẩu.'
+                );
+
+                valid = false;
+            }
+
+            // Nếu form không hợp lệ
+            if (!valid) {
+
+                btn.disabled = false;
+
+                btn.innerHTML =
+                    '<i class="bi bi-box-arrow-in-right"></i> Đăng nhập';
+
+                e.preventDefault();
+                return;
+            }
+
+            // Show loading spinner khi hợp lệ
+            btn.innerHTML =
+                '<span class="spinner-border spinner-border-sm me-2"></span>Đang đăng nhập...';
+
+            btn.disabled = true;
+        });
+
+        // Show error
+        function showError(divId, spanId, msg) {
+
+            document.getElementById(spanId).textContent = msg;
+
+            document.getElementById(divId).style.display = 'block';
+        }
+
+        // Hide error
+        function hideError(divId) {
+
+            document.getElementById(divId).style.display = 'none';
+        }
+
+        // Clear error khi nhập lại
+        document.getElementById('loginEmail')
+            .addEventListener('input', function () {
+
+                hideError('emailError');
+            });
+
+        document.getElementById('loginPassword')
+            .addEventListener('input', function () {
+
+                hideError('passwordError');
+            });
+
+        // Override autofill styling
+        document.addEventListener('DOMContentLoaded', function () {
+
+            document.querySelectorAll('input.form-glass')
+                .forEach(function (el) {
+
+                    el.addEventListener('animationstart', function (e) {
+
+                        if (e.animationName === 'onAutoFillStart') {
+
+                            el.style.background = 'rgba(8,10,15,0.5)';
+                            el.style.color = '#fff';
+                        }
+                    });
+                });
+        });
+    </script>
+
+    <style>
+        input.form-glass:-webkit-autofill,
+        input.form-glass:-webkit-autofill:hover,
+        input.form-glass:-webkit-autofill:focus,
+        input.form-glass:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px rgba(8,10,15,0.95) inset !important;
+            -webkit-text-fill-color: #fff !important;
+            caret-color: #fff;
+        }
+    </style>
+}

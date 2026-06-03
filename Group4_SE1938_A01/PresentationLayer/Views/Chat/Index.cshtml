@@ -1,0 +1,826 @@
+@model IEnumerable<BusinessLayer.DTOs.SubjectDto>
+
+@{
+    ViewData["Title"] = "Trợ lý học tập RAG";
+    Layout = "_Layout";
+    var strategies = ViewBag.Strategies as IEnumerable<BusinessLayer.DTOs.ChunkingStrategyDto> ?? new List<BusinessLayer.DTOs.ChunkingStrategyDto>();
+    var models = ViewBag.EmbeddingModels as IEnumerable<BusinessLayer.DTOs.EmbeddingModelDto> ?? new List<BusinessLayer.DTOs.EmbeddingModelDto>();
+}
+
+<div class="chat-container">
+    
+    <!-- 1. LEFT PANEL: CHAT HISTORIES & SUBJECT SELECTOR -->
+    <div class="chat-sidebar card-glass p-3 h-100">
+        <!-- Subject Select -->
+        <div class="mb-3">
+            <label class="form-label text-muted-custom small fw-semibold uppercase"><i class="bi bi-journal-code"></i> Lĩnh vực môn học</label>
+            <select id="subjectSelect" class="form-select form-glass" onchange="loadSessionsForSubject()">
+                <option value="">-- Chọn môn học --</option>
+                @foreach (var sub in Model)
+                {
+                    <option value="@sub.SubjectId">@sub.SubjectCode - @sub.SubjectName</option>
+                }
+            </select>
+        </div>
+
+        <!-- Document Management Section (Upload + List) -->
+        <div id="documentSection" class="d-none mb-2">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small fw-bold text-muted-custom" style="text-transform:uppercase;letter-spacing:.05em;"><i class="bi bi-files"></i> Tài liệu học tập</span>
+                <button class="btn btn-sm btn-outline-glass py-0 px-2" style="font-size:.72rem;" onclick="openUploadModal()">
+                    <i class="bi bi-upload"></i> Upload
+                </button>
+            </div>
+            <div id="documentList" style="max-height:160px;overflow-y:auto;">
+                <div class="text-center text-muted-custom py-2 small" id="docListPlaceholder">
+                    <i class="bi bi-file-earmark-x"></i> Chưa có tài liệu nào
+                </div>
+            </div>
+        </div>
+
+        <div class="border-top border-white border-opacity-10 my-2 d-none" id="sessionDivider"></div>
+
+        <button class="btn btn-glow-primary w-100 py-2 d-flex align-items-center justify-content-center gap-2 mb-3 d-none" id="btnNewChat" onclick="createNewChatSession()">
+            <i class="bi bi-chat-left-plus-fill"></i> Cuộc trò chuyện mới
+        </button>
+
+        <!-- Sessions Scrollable Container -->
+        <div class="flex-grow-1 overflow-auto pe-1" id="sessionListContainer">
+            <div class="text-muted-custom small fw-semibold mb-1 d-none" id="sessionLabel" style="text-transform:uppercase;letter-spacing:.05em;"><i class="bi bi-clock-history"></i> Lịch sử hội thoại</div>
+            <div class="text-center text-muted-custom py-5" id="sessionPlaceholder">
+                <i class="bi bi-chat-square-quote fs-2 mb-2 d-block"></i>
+                Vui lòng chọn môn học để xem lịch sử
+            </div>
+            <div class="list-group list-group-flush gap-1" id="sessionList">
+            </div>
+        </div>
+
+        <!-- RAG Settings panel -->
+        <div class="border-top border-white border-opacity-10 pt-3 mt-3 d-none" id="ragSettingsPanel">
+            <a class="d-flex justify-content-between align-items-center text-glow text-decoration-none small fw-bold" data-bs-toggle="collapse" href="#collapseRagSettings" role="button">
+                <span><i class="bi bi-sliders"></i> Cấu hình RAG Sandbox</span>
+                <i class="bi bi-chevron-down"></i>
+            </a>
+            
+            <div class="collapse mt-2" id="collapseRagSettings">
+                <div class="p-2 rounded bg-dark bg-opacity-25" style="border: 1px solid var(--border-glass);">
+                    <div class="mb-2">
+                        <label class="small text-muted-custom">Embedding Model</label>
+                        <select id="ragModel" class="form-select form-glass py-1 px-2" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()">
+                            @foreach (var m in models)
+                            {
+                                <option value="@m.ModelId">@m.ModelName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="small text-muted-custom">Strategy</label>
+                        <select id="ragStrategy" class="form-select form-glass py-1 px-2" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()">
+                            @foreach (var s in strategies)
+                            {
+                                <option value="@s.StrategyId">@s.StrategyName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="small text-muted-custom">Size</label>
+                            <input type="number" id="ragSize" class="form-control form-glass py-1 px-2" value="500" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()" />
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted-custom">Overlap</label>
+                            <input type="number" id="ragOverlap" class="form-control form-glass py-1 px-2" value="100" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()" />
+                        </div>
+                    </div>
+                    <div id="sandboxConfigStatus" class="d-flex align-items-center gap-2 px-2 py-1 rounded" style="font-size:0.68rem; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); color:#34d399;">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span id="sandboxStatusText">Cấu hình mặc định — áp dụng cho tin nhắn tiếp theo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. CENTER PANEL: MAIN CHAT SPACE -->
+    <div class="chat-main h-100 card-glass p-0">
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <div>
+                <h5 class="fw-bold text-glow mb-0" id="activeSessionTitle">Vui lòng chọn hoặc tạo cuộc trò chuyện mới</h5>
+                <span class="small text-muted-custom" id="activeSubjectCode">VietRAG Assistant</span>
+            </div>
+            
+            <div class="d-inline-flex gap-2 d-none" id="sessionHeaderActions">
+                <button class="btn btn-sm btn-outline-glass py-1 px-2" onclick="openRenameModal()">
+                    <i class="bi bi-pencil"></i> Đổi tên
+                </button>
+                <button class="btn btn-sm btn-logout py-1 px-2" onclick="confirmDeleteSession()">
+                    <i class="bi bi-trash"></i> Xóa hội thoại
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Bubble Messages scroll area -->
+        <div class="chat-messages" id="chatMessagesArea">
+            <div class="w-100 h-100 d-flex align-items-center justify-content-center" id="chatPlaceholderArea">
+                <div class="text-center text-muted-custom" style="max-width: 400px;">
+                    <i class="bi bi-cpu-fill fs-1 text-glow mb-3 d-block"></i>
+                    <h5 class="text-white fw-bold">Trợ lý học tập thông minh RAG</h5>
+                    <p class="small">Lựa chọn môn học ở thanh bên trái, bắt đầu cuộc hội thoại để đặt câu hỏi trực tiếp dựa trên nguồn tài liệu đã được giảng viên biên soạn và lập chỉ mục.</p>
+                </div>
+            </div>
+            <!-- Messages rendered dynamically here -->
+        </div>
+
+        <!-- Chat Input field -->
+        <div class="chat-input-area">
+            <form id="chatForm" onsubmit="sendChatMessage(event)" class="d-none">
+                @Html.AntiForgeryToken()
+                <div class="input-group">
+                    <input type="text" id="chatInputField" class="form-control form-glass py-3" placeholder="Nhập câu hỏi học tập của bạn về chương học..." required autocomplete="off" />
+                    <button class="btn btn-glow-primary px-4 d-flex align-items-center gap-2" type="submit" id="btnSendChat">
+                        <i class="bi bi-send-fill"></i> Gửi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. RIGHT PANEL: CITATIONS SIDE DRAWER -->
+    <div class="citation-drawer card-glass h-100 p-3 d-none" id="citationsPanel">
+        <h6 class="fw-bold text-glow border-bottom border-white border-opacity-10 pb-2 mb-3">
+            <i class="bi bi-file-earmark-ruled-fill"></i> Trích xuất ngữ cảnh RAG
+        </h6>
+        
+        <div class="d-flex flex-column gap-3" id="citationsListContainer">
+            <div class="text-center text-muted-custom py-5" id="citationsPlaceholder">
+                <i class="bi bi-shield-fill-check fs-2 mb-2 d-block"></i>
+                Không có dữ liệu trích dẫn
+            </div>
+            <!-- Citations list dynamic -->
+        </div>
+    </div>
+
+</div>
+
+<!-- Rename Session Modal -->
+<div class="modal fade" id="renameSessionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-pencil-square"></i> Đổi tên cuộc trò chuyện</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="renameSessionForm" onsubmit="saveRenameSession(event)">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Tiêu đề mới</label>
+                        <input type="text" id="modalRenameTitle" class="form-control form-glass" required />
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-glow-primary">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Document Modal -->
+<div class="modal fade" id="uploadDocModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-glass">
+            <div class="modal-header modal-header-glass">
+                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-cloud-upload-fill"></i> Upload Tài Liệu Học Tập</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" id="uploadModalCloseBtn"></button>
+            </div>
+
+            <!-- Upload Form -->
+            <div id="uploadFormSection">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Tiêu đề tài liệu <span class="text-danger">*</span></label>
+                        <input type="text" id="uploadTitle" class="form-control form-glass" placeholder="VD: Bài giảng Chương 3 - MVC Pattern" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted-custom">Chọn file <span class="text-danger">*</span></label>
+                        <input type="file" id="uploadFile" class="form-control form-glass" accept=".pdf,.docx,.pptx,.txt" />
+                        <div class="form-text text-muted-custom" style="font-size:.75rem;">Chấp nhận: PDF, DOCX, PPTX, TXT — Tối đa 15MB</div>
+                    </div>
+                    <div id="uploadFormError" class="alert alert-danger d-none py-2" style="font-size:.8rem;"></div>
+                </div>
+                <div class="modal-footer modal-footer-glass">
+                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-glow-primary" onclick="startUpload()" id="btnStartUpload">
+                        <i class="bi bi-upload"></i> Tải lên & Lập chỉ mục
+                    </button>
+                </div>
+            </div>
+
+            <!-- Upload Progress Section -->
+            <div id="uploadProgressSection" class="d-none">
+                <div class="modal-body p-4">
+                    <p class="text-muted-custom small mb-3">Đang xử lý tài liệu, vui lòng chờ...</p>
+                    <div class="d-flex flex-column gap-2" id="uploadStepsList">
+                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep1">
+                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
+                            <span class="step-text small">Xác thực tệp (Validate)</span>
+                        </div>
+                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep2">
+                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
+                            <span class="step-text small">Trích xuất văn bản (Extract Text)</span>
+                        </div>
+                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep3">
+                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
+                            <span class="step-text small">Phân nhỏ văn bản (Chunking)</span>
+                        </div>
+                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep4">
+                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
+                            <span class="step-text small">Tạo vector embedding</span>
+                        </div>
+                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep5">
+                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
+                            <span class="step-text small">Lưu vào Vector Store &amp; Index</span>
+                        </div>
+                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep6">
+                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
+                            <span class="step-text small">Cập nhật danh sách tài liệu</span>
+                        </div>
+                    </div>
+                    <div id="uploadResultMsg" class="mt-3 d-none"></div>
+                </div>
+                <div class="modal-footer modal-footer-glass" id="uploadProgressFooter">
+                    <button type="button" class="btn btn-outline-glass d-none" id="btnUploadAnother" onclick="resetUploadModal()">Upload thêm</button>
+                    <button type="button" class="btn btn-glow-primary d-none" id="btnUploadDone" data-bs-dismiss="modal">Hoàn thành</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+.upload-step { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); transition: all .3s; }
+.upload-step.step-active { background: rgba(99,102,241,.15); border-color: rgba(99,102,241,.4); }
+.upload-step.step-done { background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.35); }
+.upload-step.step-error { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.35); }
+.upload-step .step-icon { font-size: 1.1rem; width: 24px; text-align: center; }
+.upload-step.step-active .step-icon { color: #818cf8; }
+.upload-step.step-done .step-icon { color: #10b981; }
+.upload-step.step-error .step-icon { color: #ef4444; }
+.doc-item { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); margin-bottom:4px; font-size:.75rem; cursor:default; }
+.doc-item:hover { background:rgba(255,255,255,.07); }
+.doc-item .doc-icon { font-size:1rem; }
+.doc-item.pdf .doc-icon { color:#f87171; }
+.doc-item.docx .doc-icon { color:#60a5fa; }
+.doc-item.pptx .doc-icon { color:#fb923c; }
+.doc-item.txt .doc-icon { color:#a3e635; }
+.doc-badge { font-size:.6rem; padding:1px 5px; border-radius:20px; background:rgba(16,185,129,.2); color:#34d399; border:1px solid rgba(16,185,129,.3); }
+</style>
+    <script>
+        var activeSessionId = null;
+        var activeCitations = {};
+        var lastSentMessage = null;
+
+        // --- Load Documents for Subject (sidebar) ---
+        function loadDocumentsForSubject(subjectId) {
+            if (!subjectId) { $('#documentList').html('<div class="text-center text-muted-custom py-2 small" id="docListPlaceholder"><i class="bi bi-file-earmark-x"></i> Chưa có tài liệu nào</div>'); return; }
+            $.get('/Chat/GetDocumentsBySubject?subjectId=' + subjectId, function(docs) {
+                if (!docs || docs.length === 0) {
+                    $('#documentList').html('<div class="text-center text-muted-custom py-2 small"><i class="bi bi-file-earmark-x"></i> Chưa có tài liệu nào. Hãy Upload!</div>');
+                    return;
+                }
+                var icons = { 'PDF':'bi-file-earmark-pdf', 'DOCX':'bi-file-earmark-word', 'PPTX':'bi-file-earmark-slides', 'TXT':'bi-file-earmark-text' };
+                var html = '';
+                docs.forEach(function(d) {
+                    var ft = (d.fileType||'TXT').toUpperCase();
+                    var ic = icons[ft] || 'bi-file-earmark';
+                    var cls = ft.toLowerCase();
+                    var badge = d.isIndexed ? '<span class="doc-badge ms-auto">Indexed</span>' : '<span class="doc-badge ms-auto" style="background:rgba(251,146,60,.2);color:#fb923c;border-color:rgba(251,146,60,.3);">Pending</span>';
+                    html += `<div class="doc-item ${cls}" title="${d.fileName}"><i class="bi ${ic} doc-icon"></i><span class="text-truncate flex-grow-1">${d.title}</span>${badge}</div>`;
+                });
+                $('#documentList').html(html);
+            });
+        }
+
+        // --- 1. Load Sessions + Documents ---
+        function loadSessionsForSubject() {
+            var subId = $("#subjectSelect").val();
+            if (!subId) {
+                $("#btnNewChat").addClass("d-none");
+                $("#ragSettingsPanel").addClass("d-none");
+                $("#documentSection").addClass("d-none");
+                $("#sessionDivider").addClass("d-none");
+                $("#sessionLabel").addClass("d-none");
+                $("#sessionList").empty();
+                $("#sessionPlaceholder").removeClass("d-none");
+                resetChatSpace();
+                return;
+            }
+            $("#sessionPlaceholder").addClass("d-none");
+            $("#btnNewChat").removeClass("d-none");
+            $("#ragSettingsPanel").removeClass("d-none");
+            $("#documentSection").removeClass("d-none");
+            $("#sessionDivider").removeClass("d-none");
+            $("#sessionLabel").removeClass("d-none");
+            loadDocumentsForSubject(subId);
+            $("#sessionList").html('<div class="text-center text-muted-custom py-3"><div class="spinner-border text-glow spinner-border-sm"></div></div>');
+            $.get("/Chat/GetSessions?subjectId=" + subId, function (data) {
+                if (data.length === 0) { $("#sessionList").html('<div class="text-center text-muted-custom py-3 small">Chưa có hội thoại nào. Tạo mới bên trên!</div>'); return; }
+                var html = "";
+                data.forEach(function (s) {
+                    var isActive = (s.sessionId === activeSessionId) ? "active" : "";
+                    html += `<div class="session-item ${isActive}" data-id="${s.sessionId}" onclick="selectSession('${s.sessionId}', this)"><div class="d-flex align-items-center gap-2 overflow-hidden text-nowrap"><i class="bi bi-chat-left-text text-glow"></i><span class="fw-bold small session-text text-truncate">${s.title}</span></div><span class="small text-muted-custom" style="font-size:0.65rem;">${s.lastUpdatedAt}</span></div>`;
+                });
+                $("#sessionList").html(html);
+            });
+        }
+
+        // --- Upload Modal ---
+        function openUploadModal() {
+            var subId = $('#subjectSelect').val();
+            if (!subId) { Swal.fire({icon:'warning',title:'Chọn môn học',text:'Vui lòng chọn môn học trước khi upload.',background:'rgba(13,17,28,.95)',color:'#fff'}); return; }
+            resetUploadModal();
+            new bootstrap.Modal(document.getElementById('uploadDocModal')).show();
+        }
+
+        function resetUploadModal() {
+            $('#uploadFormSection').removeClass('d-none');
+            $('#uploadProgressSection').addClass('d-none');
+            $('#uploadTitle').val('');
+            $('#uploadFile').val('');
+            $('#uploadFormError').addClass('d-none').text('');
+            $('#btnStartUpload').prop('disabled', false);
+            ['ustep1','ustep2','ustep3','ustep4','ustep5','ustep6'].forEach(function(id) { setStep(id,'wait'); });
+            $('#uploadResultMsg').addClass('d-none').html('');
+            $('#btnUploadAnother').addClass('d-none');
+            $('#btnUploadDone').addClass('d-none');
+        }
+
+        function setStep(id, state) {
+            var el = $('#' + id);
+            el.removeClass('step-active step-done step-error');
+            var icon = el.find('.step-icon');
+            if (state === 'active') { el.addClass('step-active'); icon.html('<div class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px;"></div>'); }
+            else if (state === 'done')  { el.addClass('step-done');  icon.html('<i class="bi bi-check-circle-fill"></i>'); }
+            else if (state === 'error') { el.addClass('step-error'); icon.html('<i class="bi bi-x-circle-fill"></i>'); }
+            else                        { icon.html('<i class="bi bi-hourglass"></i>'); }
+        }
+
+        async function startUpload() {
+            var title   = $('#uploadTitle').val().trim();
+            var file    = $('#uploadFile')[0].files[0];
+            var subId   = $('#subjectSelect').val();
+            var token   = $('input[name="__RequestVerificationToken"]').val();
+
+            if (!title || !file) { $('#uploadFormError').removeClass('d-none').text('Vui lòng nhập tiêu đề và chọn file.'); return; }
+
+            $('#uploadModalCloseBtn').prop('disabled', true);
+            $('#uploadFormSection').addClass('d-none');
+            $('#uploadProgressSection').removeClass('d-none');
+
+            // Step 1 — Validate
+            setStep('ustep1','active');
+            await sleep(400);
+            setStep('ustep1','done');
+
+            // Step 2 — Extract
+            setStep('ustep2','active');
+            await sleep(350);
+
+            // Step 3 — Chunking (starts on server side, show active)
+            setStep('ustep3','active');
+
+            // POST to server (steps 3-6 happen inside)
+            var formData = new FormData();
+            formData.append('subjectId', subId);
+            formData.append('title', title);
+            formData.append('file', file);
+            formData.append('__RequestVerificationToken', token);
+
+            try {
+                var res = await fetch('/Chat/UploadStudentDocument', { method: 'POST', body: formData });
+                var data = await res.json();
+
+                if (!data.success) {
+                    var failStep = data.step || 3;
+                    ['ustep1','ustep2','ustep3','ustep4','ustep5','ustep6'].forEach(function(id, i) {
+                        if (i + 1 < failStep)  setStep(id, 'done');
+                        else if (i + 1 === failStep) setStep(id, 'error');
+                    });
+                    $('#uploadResultMsg').removeClass('d-none').html('<div class="alert alert-danger py-2" style="font-size:.8rem;"><i class="bi bi-exclamation-triangle-fill"></i> ' + data.message + '</div>');
+                    $('#btnUploadAnother').removeClass('d-none');
+                    $('#uploadModalCloseBtn').prop('disabled', false);
+                    return;
+                }
+
+                // Success — animate remaining steps
+                setStep('ustep2','done');
+                setStep('ustep3','done');
+                setStep('ustep4','active'); await sleep(300); setStep('ustep4','done');
+                setStep('ustep5','active'); await sleep(300); setStep('ustep5','done');
+                setStep('ustep6','active');
+                loadDocumentsForSubject(subId);
+                await sleep(300); setStep('ustep6','done');
+
+                $('#uploadResultMsg').removeClass('d-none').html('<div class="alert py-2" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#34d399;font-size:.8rem;"><i class="bi bi-check-circle-fill"></i> ' + data.message + '</div>');
+                $('#btnUploadAnother').removeClass('d-none');
+                $('#btnUploadDone').removeClass('d-none');
+            } catch(e) {
+                setStep('ustep3','error');
+                $('#uploadResultMsg').removeClass('d-none').html('<div class="alert alert-danger py-2" style="font-size:.8rem;"><i class="bi bi-exclamation-triangle-fill"></i> Lỗi kết nối: ' + e.message + '</div>');
+                $('#btnUploadAnother').removeClass('d-none');
+            }
+            $('#uploadModalCloseBtn').prop('disabled', false);
+        }
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        // --- 2. Session selection and history retrieval ---
+        function selectSession(sessionId, elem) {
+            activeSessionId = sessionId;
+
+            // Highlight selected
+            $("#sessionList .session-item").removeClass("active");
+            $(elem).addClass("active");
+
+            // Setup headers
+            var sessionText = $(elem).find(".session-text").text();
+            $("#activeSessionTitle").text(sessionText);
+            
+            var selectedSubText = $("#subjectSelect option:selected").text();
+            $("#activeSubjectCode").text(selectedSubText);
+
+            $("#sessionHeaderActions").removeClass("d-none");
+            $("#chatPlaceholderArea").addClass("d-none");
+            $("#chatForm").removeClass("d-none");
+            
+            // Clear message list & show loader
+            $("#chatMessagesArea").html('<div class="w-100 h-100 d-flex align-items-center justify-content-center"><div class="text-center text-muted-custom"><div class="spinner-border text-glow mb-2" role="status"></div><div>Đang tải tin nhắn...</div></div></div>');
+            $("#citationsPanel").removeClass("d-none");
+            $("#citationsListContainer").html('<div class="text-center text-muted-custom py-5"><i class="bi bi-file-earmark-ruled-fill fs-2 mb-2 d-block"></i>Chọn tin nhắn để hiển thị trích dẫn nguồn tài liệu.</div>');
+
+            // Load Chat History
+            $.get("/Chat/GetSessionHistory?sessionId=" + sessionId, function (data) {
+                $("#chatMessagesArea").empty();
+
+                if (data.length === 0) {
+                    $("#chatMessagesArea").html('<div class="text-center text-muted-custom py-5">Bắt đầu nhập câu hỏi học tập đầu tiên để kích hoạt trợ lý RAG!</div>');
+                    return;
+                }
+
+                data.forEach(function (h) {
+                    appendHistoryRecordToChat(h);
+                });
+
+                scrollToBottom();
+            });
+        }
+
+        // --- 3. Create Session ---
+        function createNewChatSession() {
+            var subId = $("#subjectSelect").val();
+            if (!subId) return;
+
+            $.post("/Chat/CreateSession", { 
+                subjectId: subId, 
+                title: "Cuộc hội thoại RAG mới", 
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() 
+            }, function (res) {
+                if (res.success) {
+                    activeSessionId = res.sessionId;
+                    loadSessionsForSubject();
+                    // Auto select the new session after reload in a small timeout
+                    setTimeout(function() {
+                        $(`#sessionList .session-item[data-id="${res.sessionId}"]`).click();
+                    }, 500);
+                }
+            });
+        }
+
+        // --- 4. Send Message (AJAX) ---
+        function sendChatMessage(e) {
+            e.preventDefault();
+            var message = $("#chatInputField").val().trim();
+            if (!message || !activeSessionId) return;
+
+            // Track for retry
+            lastSentMessage = message;
+
+            // Clear input field
+            $("#chatInputField").val("");
+
+            // Append User message instantly
+            var timestamp = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            var userHtml = `
+                <div class="chat-bubble chat-bubble-user align-self-end">
+                    <div>${escapeHtml(message)}</div>
+                    <div class="text-end small text-white text-opacity-50 mt-1" style="font-size:0.65rem;">${timestamp}</div>
+                </div>
+            `;
+            $("#chatMessagesArea").append(userHtml);
+            scrollToBottom();
+
+            // Show Glowing Typing Indicator
+            var typingHtml = `
+                <div class="chat-bubble chat-bubble-bot align-self-start border border-white border-opacity-10 d-flex align-items-center gap-2" id="typingIndicator">
+                    <div class="spinner-grow text-glow spinner-grow-sm" role="status" style="width: 8px; height: 8px;"></div>
+                    <div class="spinner-grow text-glow spinner-grow-sm" role="status" style="width: 8px; height: 8px; animation-delay: 0.2s;"></div>
+                    <div class="spinner-grow text-glow spinner-grow-sm" role="status" style="width: 8px; height: 8px; animation-delay: 0.4s;"></div>
+                    <span class="small text-muted-custom">Trợ lý RAG đang suy nghĩ & so khớp tài liệu...</span>
+                </div>
+            `;
+            $("#chatMessagesArea").append(typingHtml);
+            scrollToBottom();
+
+            // Parameters from configuration panel
+            var formData = {
+                sessionId: activeSessionId,
+                message: message,
+                modelId: $("#ragModel").val() || 1,
+                strategyId: $("#ragStrategy").val() || 1,
+                chunkSize: $("#ragSize").val() || 500,
+                chunkOverlap: $("#ragOverlap").val() || 100,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            };
+
+            $.post("/Chat/SendMessage", formData, function (res) {
+                // Remove Typing Indicator
+                $("#typingIndicator").remove();
+
+                if (res.success) {
+                    // Cache citations inside active session
+                    activeCitations[res.historyId] = res.citations;
+                    
+                    // Check if the bot response is an error message from the AI service
+                    var isErrorResponse = res.botResponse && (
+                        res.botResponse.includes('Xin lỗi, đã có lỗi xảy ra') ||
+                        res.botResponse.includes('Hệ thống đang bận') ||
+                        res.botResponse.includes('Hệ thống chưa được cấu hình') ||
+                        res.botResponse.includes('Không nhận được phản hồi từ AI')
+                    );
+
+                    if (isErrorResponse) {
+                        // Render error bubble with retry
+                        var errorBotHtml = `
+                            <div class="chat-bubble chat-bubble-bot align-self-start" style="border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.08);">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-exclamation-triangle-fill" style="color:#f87171;"></i>
+                                    <span class="fw-semibold" style="color:#fca5a5;">Lỗi phản hồi</span>
+                                </div>
+                                <div class="small" style="color:var(--text-secondary);">${escapeHtml(res.botResponse)}</div>
+                                <div class="mt-2 pt-2 border-top border-white border-opacity-10">
+                                    <button class="btn btn-sm py-1 px-3" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);color:#818cf8;font-size:.75rem;" onclick="retryLastMessage()">
+                                        <i class="bi bi-arrow-clockwise"></i> Thử lại
+                                    </button>
+                                    <span class="text-muted-custom ms-2" style="font-size:0.65rem;"><i class="bi bi-clock"></i> ${res.timestamp}</span>
+                                </div>
+                            </div>
+                        `;
+                        $("#chatMessagesArea").append(errorBotHtml);
+                    } else {
+                        // Render normal Bot bubble
+                        var botHtml = `
+                            <div class="chat-bubble chat-bubble-bot align-self-start border border-white border-opacity-10" onclick="showCitationsForHistory('${res.historyId}')">
+                                <div class="bot-text">${formatResponseText(res.botResponse)}</div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-white border-opacity-10" style="font-size:0.7rem;">
+                                    <span class="text-muted-custom"><i class="bi bi-clock"></i> ${res.timestamp}</span>
+                                    <span class="text-glow cursor-pointer fw-semibold"><i class="bi bi-file-earmark-ruled"></i> Xem ${res.citations.length} trích dẫn nguồn</span>
+                                </div>
+                            </div>
+                        `;
+                        $("#chatMessagesArea").append(botHtml);
+
+                        // Immediately show citations drawer for this message
+                        showCitationsForHistory(res.historyId);
+                    }
+                    scrollToBottom();
+                } else {
+                    // Server returned success=false (validation error etc.)
+                    var errorHtml = `
+                        <div class="chat-bubble chat-bubble-bot align-self-start" style="border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.08);">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <i class="bi bi-exclamation-triangle-fill" style="color:#f87171;"></i>
+                                <span class="fw-semibold small" style="color:#fca5a5;">${escapeHtml(res.message)}</span>
+                            </div>
+                            <button class="btn btn-sm py-1 px-3 mt-1" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);color:#818cf8;font-size:.75rem;" onclick="retryLastMessage()">
+                                <i class="bi bi-arrow-clockwise"></i> Thử lại
+                            </button>
+                        </div>
+                    `;
+                    $("#chatMessagesArea").append(errorHtml);
+                    scrollToBottom();
+                }
+            }).fail(function(xhr, status, error) {
+                // Network or server error
+                $("#typingIndicator").remove();
+                var errorHtml = `
+                    <div class="chat-bubble chat-bubble-bot align-self-start" style="border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.08);">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="bi bi-wifi-off" style="color:#f87171;"></i>
+                            <span class="fw-semibold small" style="color:#fca5a5;">Lỗi kết nối đến máy chủ</span>
+                        </div>
+                        <div class="small text-muted-custom">Vui lòng kiểm tra kết nối mạng và thử lại.</div>
+                        <button class="btn btn-sm py-1 px-3 mt-2" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);color:#818cf8;font-size:.75rem;" onclick="retryLastMessage()">
+                            <i class="bi bi-arrow-clockwise"></i> Thử lại
+                        </button>
+                    </div>
+                `;
+                $("#chatMessagesArea").append(errorHtml);
+                scrollToBottom();
+            });
+        }
+
+        // Helper render a record
+        function appendHistoryRecordToChat(h) {
+            // Cache citations
+            activeCitations[h.historyId] = h.citations;
+
+            var userHtml = `
+                <div class="chat-bubble chat-bubble-user align-self-end">
+                    <div>${escapeHtml(h.userMessage)}</div>
+                    <div class="text-end small text-white text-opacity-50 mt-1" style="font-size:0.65rem;">${h.timestamp}</div>
+                </div>
+            `;
+            $("#chatMessagesArea").append(userHtml);
+
+            var botHtml = `
+                <div class="chat-bubble chat-bubble-bot align-self-start border border-white border-opacity-10" onclick="showCitationsForHistory('${h.historyId}')">
+                    <div class="bot-text">${formatResponseText(h.botResponse)}</div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-white border-opacity-10" style="font-size:0.7rem;">
+                        <span class="text-muted-custom"><i class="bi bi-clock"></i> ${h.timestamp}</span>
+                        <span class="text-glow cursor-pointer fw-semibold"><i class="bi bi-file-earmark-ruled"></i> Xem ${h.citations.length} trích dẫn nguồn</span>
+                    </div>
+                </div>
+            `;
+            $("#chatMessagesArea").append(botHtml);
+        }
+
+        // Retry last failed message
+        function retryLastMessage() {
+            if (!lastSentMessage || !activeSessionId) return;
+            $("#chatInputField").val(lastSentMessage);
+            $("#chatForm").trigger('submit');
+        }
+
+        // Click-through Citations Highlight panel
+        function showCitationsForHistory(historyId) {
+            var cites = activeCitations[historyId];
+            if (!cites || cites.length === 0) {
+                $("#citationsListContainer").html('<div class="text-center text-muted-custom py-5"><i class="bi bi-shield-slash fs-2 mb-2 d-block"></i>Mẫu phản hồi này không có trích dẫn tài liệu nào (Có thể được sinh trực tiếp hoặc lỗi truy xuất).</div>');
+                return;
+            }
+
+            var html = "";
+            cites.forEach(function (c, index) {
+                var scoreText = '';
+                if (c.scorePercent !== undefined && c.scorePercent !== null) {
+                    scoreText = `<span class="text-glow fw-semibold">${c.scorePercent}% match</span>`;
+                }
+                html += `
+                    <div class="citation-card hover-scale citation-card-item" id="cite-card-${c.chunkId}">
+                        <div class="citation-card-title">
+                            <span>Nguồn [${index + 1}] - Trang ${c.pageNumber}</span>
+                            ${scoreText}
+                            <i class="bi bi-bookmark-fill text-glow"></i>
+                        </div>
+                        <div class="small text-white fw-bold mb-1 text-truncate" style="font-size:0.75rem;">${c.documentTitle}</div>
+                        <div class="citation-card-body font-monospace mt-1">${escapeHtml(c.snippet)}</div>
+                    </div>
+                `;
+            });
+            $("#citationsListContainer").html(html);
+        }
+
+        // Clicking a [Nguồn X] badge triggers flashing the card in drawer
+        function highlightCitationCard(chunkId) {
+            var cardElem = $(`#cite-card-${chunkId}`);
+            if (cardElem.length > 0) {
+                cardElem[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                cardElem.addClass("border-primary").css("box-shadow", "0 0 15px rgba(99, 102, 241, 0.6)");
+                setTimeout(function() {
+                    cardElem.removeClass("border-primary").css("box-shadow", "none");
+                }, 2000);
+            }
+        }
+
+        // --- 5. Rename Session ---
+        function openRenameModal() {
+            var curTitle = $("#activeSessionTitle").text();
+            $("#modalRenameTitle").val(curTitle);
+            
+            var modal = new bootstrap.Modal(document.getElementById('renameSessionModal'));
+            modal.show();
+        }
+
+        function saveRenameSession(e) {
+            e.preventDefault();
+            var title = $("#modalRenameTitle").val().trim();
+            if (!title || !activeSessionId) return;
+
+            $.post("/Chat/RenameSession", {
+                sessionId: activeSessionId,
+                newTitle: title,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            }, function (res) {
+                if (res.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('renameSessionModal')).hide();
+                    $("#activeSessionTitle").text(title);
+                    loadSessionsForSubject();
+                }
+            });
+        }
+
+        // --- 6. Delete Session ---
+        function confirmDeleteSession() {
+            if (!activeSessionId) return;
+            var curTitle = $("#activeSessionTitle").text();
+
+            Swal.fire({
+                title: 'Xác nhận xóa cuộc hội thoại?',
+                text: "Toàn bộ lịch sử trò chuyện '" + curTitle + "' sẽ bị xóa vĩnh viễn khỏi hệ thống!",
+                icon: 'warning',
+                showCancelButton: true,
+                background: 'rgba(13, 17, 28, 0.95)',
+                color: '#fff',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: 'rgba(255, 255, 255, 0.08)',
+                confirmButtonText: 'Đồng ý xóa',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post("/Chat/DeleteSession", {
+                        sessionId: activeSessionId,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    }, function (res) {
+                        if (res.success) {
+                            activeSessionId = null;
+                            loadSessionsForSubject();
+                            resetChatSpace();
+                        }
+                    });
+                }
+            });
+        }
+
+        // --- UI Utilities ---
+        function resetChatSpace() {
+            $("#sessionHeaderActions").addClass("d-none");
+            $("#activeSessionTitle").text("Vui lòng chọn hoặc tạo cuộc trò chuyện mới");
+            $("#activeSubjectCode").text("VietRAG Assistant");
+            $("#chatMessagesArea").html(`
+                <div class="w-100 h-100 d-flex align-items-center justify-content-center" id="chatPlaceholderArea">
+                    <div class="text-center text-muted-custom" style="max-width: 400px;">
+                        <i class="bi bi-cpu-fill fs-1 text-glow mb-3 d-block"></i>
+                        <h5 class="text-white fw-bold">Trợ lý học tập thông minh RAG</h5>
+                        <p class="small">Lựa chọn môn học ở thanh bên trái, bắt đầu cuộc hội thoại để đặt câu hỏi trực tiếp dựa trên nguồn tài liệu đã được giảng viên biên soạn và lập chỉ mục.</p>
+                    </div>
+                </div>
+            `);
+            $("#chatForm").addClass("d-none");
+            $("#citationsPanel").addClass("d-none");
+        }
+
+        function scrollToBottom() {
+            var chatArea = document.getElementById("chatMessagesArea");
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Regex parsing to convert [Nguồn X - Trang Y] or [Nguồn X] into clickable HTML badges
+        function formatResponseText(text) {
+            // Converts [Nguồn X - Trang Y]
+            var formatted = text.replace(/\[Nguồn (\d+) - Trang (\d+)\]/g, function(match, indexStr, pageStr) {
+                var index = parseInt(indexStr) - 1;
+                // Since this is in bot response, we link to active session's cached citations
+                return `<span class="citation-badge" onclick="highlightCitationByOrder(${index})"><i class="bi bi-file-earmark-text"></i> Nguồn ${indexStr} (Trang ${pageStr})</span>`;
+            });
+
+            // Converts markdown bullet bolding
+            formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+            return formatted;
+        }
+
+        // Highlight citation card by index position
+        function highlightCitationByOrder(index) {
+            if (!activeSessionId) return;
+            var historyId = Object.keys(activeCitations).pop(); // Get most recent or click source context
+            var cites = activeCitations[historyId];
+            if (cites && cites[index]) {
+                highlightCitationCard(cites[index].chunkId);
+            }
+        }
+    </script>
+}

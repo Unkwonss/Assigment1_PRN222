@@ -1,0 +1,352 @@
+﻿[
+    {
+        "id":  1,
+        "question":  "Bá»‘n tĂ­nh cháº¥t cÆ¡ báº£n cá»§a láº­p trĂ¬nh hÆ°á»›ng Ä‘á»‘i tÆ°á»£ng (OOP) lĂ  gĂ¬?",
+        "ground_truth":  "Bá»‘n tĂ­nh cháº¥t cÆ¡ báº£n cá»§a OOP gá»“m: ÄĂ³ng gĂ³i (Encapsulation) â€“ áº©n dá»¯ liá»‡u bĂªn trong class vĂ  chá»‰ cho phĂ©p truy cáº­p qua phÆ°Æ¡ng thá»©c public; Káº¿ thá»«a (Inheritance) â€“ class con thá»«a hÆ°á»Ÿng thuá»™c tĂ­nh vĂ  phÆ°Æ¡ng thá»©c tá»« class cha; Äa hĂ¬nh (Polymorphism) â€“ cĂ¹ng má»™t phÆ°Æ¡ng thá»©c cĂ³ thá»ƒ hoáº¡t Ä‘á»™ng khĂ¡c nhau tuá»³ vĂ o Ä‘á»‘i tÆ°á»£ng gá»i nĂ³; Trá»«u tÆ°á»£ng (Abstraction) â€“ chá»‰ hiá»ƒn thá»‹ cĂ¡c chá»©c nÄƒng cáº§n thiáº¿t, áº©n Ä‘i chi tiáº¿t triá»ƒn khai.",
+        "topic":  "OOP Principles",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  2,
+        "question":  "Sá»± khĂ¡c nhau giá»¯a class vĂ  object trong C# lĂ  gĂ¬?",
+        "ground_truth":  "Class lĂ  má»™t báº£n thiáº¿t káº¿ (blueprint) Ä‘á»‹nh nghÄ©a cĂ¡c thuá»™c tĂ­nh vĂ  phÆ°Æ¡ng thá»©c. Object lĂ  má»™t thá»ƒ hiá»‡n (instance) cá»¥ thá»ƒ Ä‘Æ°á»£c táº¡o ra tá»« class Ä‘Ă³. VĂ­ dá»¥: class Student lĂ  khuĂ´n máº«u, cĂ²n Student sv = new Student() táº¡o ra má»™t object sv cá»¥ thá»ƒ trong bá»™ nhá»› heap.",
+        "topic":  "Class/Object",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  3,
+        "question":  "Access modifier \u0027protected\u0027 trong C# khĂ¡c gĂ¬ so vá»›i \u0027private\u0027?",
+        "ground_truth":  "Private chá»‰ cho phĂ©p truy cáº­p thĂ nh viĂªn trong chĂ­nh class chá»©a nĂ³. Protected cho phĂ©p truy cáº­p trong class chá»©a nĂ³ VĂ€ cĂ¡c class con káº¿ thá»«a tá»« nĂ³. VĂ­ dá»¥: náº¿u class Animal cĂ³ thuá»™c tĂ­nh protected string Name, thĂ¬ class Dog káº¿ thá»«a Animal cĂ³ thá»ƒ truy cáº­p Name, nhÆ°ng code bĂªn ngoĂ i cáº£ hai class thĂ¬ khĂ´ng.",
+        "topic":  "OOP Principles",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  4,
+        "question":  "Constructor trong C# lĂ  gĂ¬? CĂ³ nhá»¯ng loáº¡i constructor nĂ o?",
+        "ground_truth":  "Constructor lĂ  phÆ°Æ¡ng thá»©c Ä‘áº·c biá»‡t Ä‘Æ°á»£c gá»i tá»± Ä‘á»™ng khi táº¡o object báº±ng tá»« khoĂ¡ new. NĂ³ cĂ³ cĂ¹ng tĂªn vá»›i class vĂ  khĂ´ng cĂ³ kiá»ƒu tráº£ vá». CĂ¡c loáº¡i gá»“m: Default constructor (khĂ´ng tham sá»‘), Parameterized constructor (cĂ³ tham sá»‘), Copy constructor, vĂ  Static constructor (chá»‰ cháº¡y má»™t láº§n khi class Ä‘Æ°á»£c load láº§n Ä‘áº§u).",
+        "topic":  "Class/Object",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  5,
+        "question":  "Tá»« khoĂ¡ \u0027this\u0027 trong C# Ä‘Æ°á»£c sá»­ dá»¥ng khi nĂ o?",
+        "ground_truth":  "Tá»« khoĂ¡ \u0027this\u0027 tham chiáº¿u Ä‘áº¿n instance hiá»‡n táº¡i cá»§a class. NĂ³ thÆ°á»ng Ä‘Æ°á»£c dĂ¹ng khi tĂªn tham sá»‘ trĂ¹ng vá»›i tĂªn thuá»™c tĂ­nh (vĂ­ dá»¥: this.name = name), Ä‘á»ƒ truyá»n object hiá»‡n táº¡i lĂ m tham sá»‘ cho phÆ°Æ¡ng thá»©c khĂ¡c, hoáº·c Ä‘á»ƒ gá»i constructor khĂ¡c trong cĂ¹ng class thĂ´ng qua cĂº phĂ¡p this().",
+        "topic":  "Class/Object",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  6,
+        "question":  "Encapsulation (Ä‘Ă³ng gĂ³i) trong C# Ä‘Æ°á»£c triá»ƒn khai nhÆ° tháº¿ nĂ o? Cho vĂ­ dá»¥.",
+        "ground_truth":  "Encapsulation Ä‘Æ°á»£c triá»ƒn khai báº±ng cĂ¡ch Ä‘áº·t cĂ¡c field lĂ  private vĂ  cung cáº¥p property public Ä‘á»ƒ truy cáº­p cĂ³ kiá»ƒm soĂ¡t. VĂ­ dá»¥: private string name; public string Name { get { return name; } set { if(!string.IsNullOrEmpty(value)) name = value; } }. Äiá»u nĂ y giĂºp báº£o vá»‡ dá»¯ liá»‡u, kiá»ƒm tra tĂ­nh há»£p lá»‡ trÆ°á»›c khi gĂ¡n giĂ¡ trá»‹.",
+        "topic":  "OOP Principles",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  7,
+        "question":  "Káº¿ thá»«a (Inheritance) trong C# hoáº¡t Ä‘á»™ng nhÆ° tháº¿ nĂ o? C# cĂ³ há»— trá»£ Ä‘a káº¿ thá»«a khĂ´ng?",
+        "ground_truth":  "Káº¿ thá»«a cho phĂ©p class con (derived class) thá»«a hÆ°á»Ÿng thuá»™c tĂ­nh vĂ  phÆ°Æ¡ng thá»©c tá»« class cha (base class) báº±ng cĂº phĂ¡p class Dog : Animal. C# KHĂ”NG há»— trá»£ Ä‘a káº¿ thá»«a tá»« nhiá»u class (Ä‘á»ƒ trĂ¡nh diamond problem), nhÆ°ng má»™t class cĂ³ thá»ƒ implement nhiá»u interface cĂ¹ng lĂºc.",
+        "topic":  "Inheritance",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  8,
+        "question":  "Sá»± khĂ¡c nhau giá»¯a method overloading vĂ  method overriding trong C# lĂ  gĂ¬?",
+        "ground_truth":  "Overloading lĂ  Ä‘á»‹nh nghÄ©a nhiá»u phÆ°Æ¡ng thá»©c cĂ¹ng tĂªn trong cĂ¹ng class nhÆ°ng khĂ¡c tham sá»‘ (sá»‘ lÆ°á»£ng hoáº·c kiá»ƒu). Overriding lĂ  class con ghi Ä‘Ă¨ phÆ°Æ¡ng thá»©c virtual/abstract cá»§a class cha báº±ng tá»« khoĂ¡ override. Overloading xáº£y ra táº¡i compile-time (static polymorphism), cĂ²n overriding xáº£y ra táº¡i runtime (dynamic polymorphism).",
+        "topic":  "Polymorphism",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  9,
+        "question":  "Tá»« khoĂ¡ \u0027virtual\u0027 vĂ  \u0027override\u0027 trong C# dĂ¹ng Ä‘á»ƒ lĂ m gĂ¬?",
+        "ground_truth":  "Tá»« khoĂ¡ \u0027virtual\u0027 Ä‘Æ°á»£c Ä‘áº·t á»Ÿ phÆ°Æ¡ng thá»©c cá»§a class cha Ä‘á»ƒ cho phĂ©p class con ghi Ä‘Ă¨ nĂ³. Tá»« khoĂ¡ \u0027override\u0027 Ä‘Æ°á»£c dĂ¹ng á»Ÿ class con Ä‘á»ƒ cung cáº¥p triá»ƒn khai má»›i thay tháº¿ phÆ°Æ¡ng thá»©c virtual cá»§a class cha. Khi gá»i phÆ°Æ¡ng thá»©c qua biáº¿n kiá»ƒu class cha nhÆ°ng trá» Ä‘áº¿n object class con, phiĂªn báº£n override sáº½ Ä‘Æ°á»£c thá»±c thi (runtime polymorphism).",
+        "topic":  "Polymorphism",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  10,
+        "question":  "Abstract class trong C# lĂ  gĂ¬? Khi nĂ o nĂªn dĂ¹ng abstract class?",
+        "ground_truth":  "Abstract class lĂ  class Ä‘Æ°á»£c khai bĂ¡o vá»›i tá»« khoĂ¡ abstract, khĂ´ng thá»ƒ táº¡o object trá»±c tiáº¿p. NĂ³ cĂ³ thá»ƒ chá»©a cáº£ phÆ°Æ¡ng thá»©c abstract (chá»‰ cĂ³ khai bĂ¡o, khĂ´ng cĂ³ body) vĂ  phÆ°Æ¡ng thá»©c thĂ´ng thÆ°á»ng (cĂ³ body). NĂªn dĂ¹ng abstract class khi muá»‘n Ä‘á»‹nh nghÄ©a má»™t base class chung cĂ³ sáºµn má»™t sá»‘ logic máº·c Ä‘á»‹nh, buá»™c cĂ¡c class con pháº£i triá»ƒn khai cĂ¡c phÆ°Æ¡ng thá»©c abstract cĂ²n láº¡i.",
+        "topic":  "Abstract Class",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  11,
+        "question":  "Interface trong C# khĂ¡c gĂ¬ so vá»›i abstract class?",
+        "ground_truth":  "Interface chá»‰ chá»©a khai bĂ¡o phÆ°Æ¡ng thá»©c (trÆ°á»›c C# 8), khĂ´ng cĂ³ field hay constructor; má»™t class cĂ³ thá»ƒ implement nhiá»u interface. Abstract class cĂ³ thá»ƒ chá»©a field, constructor, vĂ  phÆ°Æ¡ng thá»©c cĂ³ body; má»™t class chá»‰ káº¿ thá»«a Ä‘Æ°á»£c má»™t abstract class. DĂ¹ng interface khi muá»‘n Ä‘á»‹nh nghÄ©a há»£p Ä‘á»“ng (contract) chung cho nhiá»u class khĂ´ng liĂªn quan, dĂ¹ng abstract class khi cĂ¡c class con cĂ³ chung logic base.",
+        "topic":  "Interface",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  12,
+        "question":  "HĂ£y giáº£i thĂ­ch cĂ¡ch sá»­ dá»¥ng List\u003cT\u003e trong C# vĂ  cĂ¡c phÆ°Æ¡ng thá»©c phá»• biáº¿n cá»§a nĂ³.",
+        "ground_truth":  "List\u003cT\u003e lĂ  collection generic cho phĂ©p lÆ°u trá»¯ danh sĂ¡ch cĂ¡c pháº§n tá»­ cĂ¹ng kiá»ƒu, kĂ­ch thÆ°á»›c tá»± Ä‘á»™ng co giĂ£n. Khai bĂ¡o: List\u003cint\u003e nums = new List\u003cint\u003e(). CĂ¡c phÆ°Æ¡ng thá»©c phá»• biáº¿n: Add() thĂªm pháº§n tá»­, Remove()/RemoveAt() xoĂ¡, Contains() kiá»ƒm tra tá»“n táº¡i, Count láº¥y sá»‘ lÆ°á»£ng, Sort() sáº¯p xáº¿p, Find() tĂ¬m pháº§n tá»­ Ä‘áº§u tiĂªn thoáº£ Ä‘iá»u kiá»‡n, ForEach() duyá»‡t qua tá»«ng pháº§n tá»­.",
+        "topic":  ".NET Collections",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  13,
+        "question":  "Dictionary\u003cTKey, TValue\u003e trong C# lĂ  gĂ¬? Khi nĂ o nĂªn dĂ¹ng thay cho List?",
+        "ground_truth":  "Dictionary\u003cTKey, TValue\u003e lÆ°u trá»¯ dá»¯ liá»‡u dáº¡ng cáº·p key-value, trong Ä‘Ă³ key pháº£i lĂ  duy nháº¥t. Truy cáº­p pháº§n tá»­ qua key cĂ³ Ä‘á»™ phá»©c táº¡p O(1), nhanh hÆ¡n nhiá»u so vá»›i List khi tĂ¬m kiáº¿m. NĂªn dĂ¹ng Dictionary khi cáº§n tra cá»©u nhanh theo khoĂ¡, vĂ­ dá»¥: Dictionary\u003cstring, Student\u003e Ä‘á»ƒ tra cá»©u sinh viĂªn theo mĂ£ sá»‘.",
+        "topic":  ".NET Collections",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  14,
+        "question":  "Queue\u003cT\u003e vĂ  Stack\u003cT\u003e trong C# khĂ¡c nhau nhÆ° tháº¿ nĂ o?",
+        "ground_truth":  "Queue\u003cT\u003e hoáº¡t Ä‘á»™ng theo nguyĂªn táº¯c FIFO (First In First Out) â€“ pháº§n tá»­ thĂªm vĂ o trÆ°á»›c sáº½ Ä‘Æ°á»£c láº¥y ra trÆ°á»›c, dĂ¹ng Enqueue() Ä‘á»ƒ thĂªm vĂ  Dequeue() Ä‘á»ƒ láº¥y. Stack\u003cT\u003e hoáº¡t Ä‘á»™ng theo LIFO (Last In First Out) â€“ pháº§n tá»­ thĂªm vĂ o sau Ä‘Æ°á»£c láº¥y ra trÆ°á»›c, dĂ¹ng Push() Ä‘á»ƒ thĂªm vĂ  Pop() Ä‘á»ƒ láº¥y. Queue phĂ¹ há»£p cho hĂ ng Ä‘á»£i xá»­ lĂ½, Stack phĂ¹ há»£p cho undo/redo.",
+        "topic":  ".NET Collections",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  15,
+        "question":  "LINQ trong C# lĂ  gĂ¬? Cho vĂ­ dá»¥ vá» LINQ query syntax vĂ  method syntax.",
+        "ground_truth":  "LINQ (Language Integrated Query) lĂ  tĂ­nh nÄƒng cho phĂ©p viáº¿t truy váº¥n dá»¯ liá»‡u trá»±c tiáº¿p trong C#. Query syntax: var result = from s in students where s.Age \u003e 18 select s.Name; Method syntax: var result = students.Where(s =\u003e s.Age \u003e 18).Select(s =\u003e s.Name). Cáº£ hai cho káº¿t quáº£ giá»‘ng nhau, method syntax phá»• biáº¿n hÆ¡n vĂ¬ gá»n vĂ  linh hoáº¡t hÆ¡n.",
+        "topic":  "LINQ",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  16,
+        "question":  "CĂ¡c phÆ°Æ¡ng thá»©c LINQ phá»• biáº¿n nĂ o hay Ä‘Æ°á»£c dĂ¹ng nháº¥t trong C#?",
+        "ground_truth":  "CĂ¡c phÆ°Æ¡ng thá»©c LINQ phá»• biáº¿n gá»“m: Where() lá»c pháº§n tá»­ theo Ä‘iá»u kiá»‡n, Select() chiáº¿u dá»¯ liá»‡u sang dáº¡ng má»›i, OrderBy()/OrderByDescending() sáº¯p xáº¿p, FirstOrDefault() láº¥y pháº§n tá»­ Ä‘áº§u tiĂªn hoáº·c null, Any() kiá»ƒm tra cĂ³ pháº§n tá»­ nĂ o thoáº£ Ä‘iá»u kiá»‡n, Count() Ä‘áº¿m, GroupBy() nhĂ³m dá»¯ liá»‡u, Sum()/Average()/Max()/Min() tĂ­nh toĂ¡n tá»•ng há»£p.",
+        "topic":  "LINQ",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  17,
+        "question":  "Exception handling trong C# hoáº¡t Ä‘á»™ng nhÆ° tháº¿ nĂ o? Giáº£i thĂ­ch try-catch-finally.",
+        "ground_truth":  "Exception handling dĂ¹ng Ä‘á»ƒ xá»­ lĂ½ lá»—i runtime má»™t cĂ¡ch cĂ³ kiá»ƒm soĂ¡t. Khá»‘i try chá»©a code cĂ³ thá»ƒ phĂ¡t sinh lá»—i. Khá»‘i catch báº¯t vĂ  xá»­ lĂ½ exception cá»¥ thá»ƒ. Khá»‘i finally luĂ´n Ä‘Æ°á»£c thá»±c thi dĂ¹ cĂ³ lá»—i hay khĂ´ng, thÆ°á»ng dĂ¹ng Ä‘á»ƒ giáº£i phĂ³ng tĂ i nguyĂªn. CĂ³ thá»ƒ cĂ³ nhiá»u catch xá»­ lĂ½ cĂ¡c loáº¡i exception khĂ¡c nhau, catch cá»¥ thá»ƒ nĂªn Ä‘áº·t trÆ°á»›c catch tá»•ng quĂ¡t.",
+        "topic":  "Exception Handling",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  18,
+        "question":  "Sá»± khĂ¡c nhau giá»¯a \u0027throw\u0027 vĂ  \u0027throw ex\u0027 trong C# lĂ  gĂ¬?",
+        "ground_truth":  "Cáº£ hai Ä‘á»u dĂ¹ng Ä‘á»ƒ nĂ©m láº¡i exception, nhÆ°ng \u0027throw\u0027 (khĂ´ng cĂ³ tham sá»‘) giá»¯ nguyĂªn stack trace gá»‘c giĂºp debug dá»… dĂ ng. \u0027throw ex\u0027 sáº½ reset stack trace, lĂ m máº¥t thĂ´ng tin vá» nÆ¡i exception phĂ¡t sinh ban Ä‘áº§u. VĂ¬ váº­y, trong khá»‘i catch nĂªn dĂ¹ng \u0027throw\u0027 thay vĂ¬ \u0027throw ex\u0027 Ä‘á»ƒ báº£o toĂ n thĂ´ng tin debug.",
+        "topic":  "Exception Handling",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  19,
+        "question":  "Delegate trong C# lĂ  gĂ¬? Cho vĂ­ dá»¥ khai bĂ¡o vĂ  sá»­ dá»¥ng delegate.",
+        "ground_truth":  "Delegate lĂ  kiá»ƒu dá»¯ liá»‡u tham chiáº¿u Ä‘áº¡i diá»‡n cho má»™t phÆ°Æ¡ng thá»©c cĂ³ chá»¯ kĂ½ (signature) xĂ¡c Ä‘á»‹nh. Khai bĂ¡o: delegate int MathOp(int a, int b); Sá»­ dá»¥ng: MathOp add = (a, b) =\u003e a + b; int result = add(3, 5); Delegate lĂ  ná»n táº£ng cho callback, event vĂ  LINQ trong C#. CĂ³ thá»ƒ gĂ¡n nhiá»u phÆ°Æ¡ng thá»©c vĂ o má»™t delegate (multicast).",
+        "topic":  "Delegates",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  20,
+        "question":  "Event trong C# lĂ  gĂ¬ vĂ  nĂ³ liĂªn quan Ä‘áº¿n delegate nhÆ° tháº¿ nĂ o?",
+        "ground_truth":  "Event lĂ  cÆ¡ cháº¿ thĂ´ng bĂ¡o (notification) dá»±a trĂªn delegate, cho phĂ©p má»™t object phĂ¡t tĂ­n hiá»‡u khi cĂ³ sá»± kiá»‡n xáº£y ra. Event Ä‘Æ°á»£c khai bĂ¡o báº±ng tá»« khoĂ¡ event kĂ¨m theo kiá»ƒu delegate: public event EventHandler OnCompleted;. BĂªn ngoĂ i class chá»‰ cĂ³ thá»ƒ += (Ä‘Äƒng kĂ½) hoáº·c -= (huá»· Ä‘Äƒng kĂ½) handler, khĂ´ng thá»ƒ gĂ¡n trá»±c tiáº¿p = hay gá»i trá»±c tiáº¿p event, Ä‘áº£m báº£o tĂ­nh Ä‘Ă³ng gĂ³i.",
+        "topic":  "Events",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  21,
+        "question":  "Async/await trong C# hoáº¡t Ä‘á»™ng nhÆ° tháº¿ nĂ o? Táº¡i sao cáº§n láº­p trĂ¬nh báº¥t Ä‘á»“ng bá»™?",
+        "ground_truth":  "Async/await cho phĂ©p viáº¿t code báº¥t Ä‘á»“ng bá»™ mĂ  váº«n dá»… Ä‘á»c nhÆ° code Ä‘á»“ng bá»™. PhÆ°Æ¡ng thá»©c async tráº£ vá» Task hoáº·c Task\u003cT\u003e vĂ  chá»©a tá»« khoĂ¡ await Ä‘á»ƒ chá» tĂ¡c vá»¥ hoĂ n thĂ nh mĂ  khĂ´ng block thread. Láº­p trĂ¬nh báº¥t Ä‘á»“ng bá»™ cáº§n thiáº¿t khi thá»±c hiá»‡n I/O (Ä‘á»c file, gá»i API, truy váº¥n DB) Ä‘á»ƒ thread chĂ­nh khĂ´ng bá»‹ Ä‘á»©ng, giá»¯ giao diá»‡n mÆ°á»£t mĂ .",
+        "topic":  "Async/Await",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  22,
+        "question":  "Sá»± khĂ¡c nhau giá»¯a Task.Run() vĂ  async/await trong C# lĂ  gĂ¬?",
+        "ground_truth":  "Task.Run() Ä‘Æ°a cĂ´ng viá»‡c sang thread pool Ä‘á»ƒ cháº¡y song song, phĂ¹ há»£p cho cĂ¡c tĂ¡c vá»¥ náº·ng vá» CPU (CPU-bound). Async/await Ä‘Æ°á»£c thiáº¿t káº¿ cho cĂ¡c tĂ¡c vá»¥ I/O-bound (Ä‘á»c file, gá»i API), nĂ³ giáº£i phĂ³ng thread hiá»‡n táº¡i trong lĂºc chá» I/O hoĂ n thĂ nh mĂ  khĂ´ng táº¡o thread má»›i. KhĂ´ng nĂªn dĂ¹ng Task.Run() cho I/O vĂ¬ lĂ£ng phĂ­ thread.",
+        "topic":  "Async/Await",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  23,
+        "question":  "Entity Framework Core lĂ  gĂ¬? NĂ³ giĂºp gĂ¬ cho viá»‡c truy cáº­p cÆ¡ sá»Ÿ dá»¯ liá»‡u?",
+        "ground_truth":  "Entity Framework Core (EF Core) lĂ  ORM (Object-Relational Mapping) cá»§a .NET, cho phĂ©p thao tĂ¡c database báº±ng cĂ¡c object C# thay vĂ¬ viáº¿t SQL thuáº§n. EF Core Ă¡nh xáº¡ class thĂ nh báº£ng, property thĂ nh cá»™t. Há»— trá»£ hai cĂ¡ch tiáº¿p cáº­n: Code First (táº¡o DB tá»« code) vĂ  Database First (sinh code tá»« DB cĂ³ sáºµn). CĂ¡c thao tĂ¡c CRUD Ä‘Æ°á»£c thá»±c hiá»‡n qua DbContext vĂ  LINQ.",
+        "topic":  "Entity Framework Core",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  24,
+        "question":  "DbContext trong Entity Framework Core cĂ³ vai trĂ² gĂ¬?",
+        "ground_truth":  "DbContext lĂ  class trung tĂ¢m cá»§a EF Core, Ä‘Ă³ng vai trĂ² cáº§u ná»‘i giá»¯a á»©ng dá»¥ng C# vĂ  database. NĂ³ quáº£n lĂ½ káº¿t ná»‘i, theo dĂµi thay Ä‘á»•i (change tracking) cá»§a cĂ¡c entity, vĂ  thá»±c hiá»‡n lÆ°u dá»¯ liá»‡u qua SaveChanges(). Má»—i DbSet\u003cT\u003e trong DbContext Ä‘áº¡i diá»‡n cho má»™t báº£ng trong database. DbContext thÆ°á»ng Ä‘Æ°á»£c Ä‘Äƒng kĂ½ vĂ o DI container vá»›i lifetime Scoped.",
+        "topic":  "Entity Framework Core",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  25,
+        "question":  "Cho Ä‘oáº¡n code: Animal a = new Dog(); a.Speak(); â€” náº¿u Speak() lĂ  virtual á»Ÿ Animal vĂ  override á»Ÿ Dog, káº¿t quáº£ sáº½ lĂ  gĂ¬? Táº¡i sao?",
+        "ground_truth":  "Káº¿t quáº£ sáº½ gá»i phiĂªn báº£n Speak() cá»§a class Dog (vĂ­ dá»¥ in ra \u0027GĂ¢u gĂ¢u\u0027). ÄĂ¢y lĂ  runtime polymorphism: biáº¿n a cĂ³ kiá»ƒu khai bĂ¡o lĂ  Animal nhÆ°ng kiá»ƒu thá»±c táº¿ (runtime type) lĂ  Dog. Khi phÆ°Æ¡ng thá»©c Ä‘Æ°á»£c Ä‘Ă¡nh dáº¥u virtual vĂ  override, CLR sá»­ dá»¥ng báº£ng phÆ°Æ¡ng thá»©c áº£o (vtable) Ä‘á»ƒ gá»i Ä‘Ăºng phiĂªn báº£n cá»§a kiá»ƒu thá»±c táº¿ táº¡i runtime.",
+        "topic":  "Polymorphism",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  26,
+        "question":  "Sealed class trong C# lĂ  gĂ¬? Khi nĂ o nĂªn sá»­ dá»¥ng?",
+        "ground_truth":  "Sealed class lĂ  class Ä‘Æ°á»£c Ä‘Ă¡nh dáº¥u báº±ng tá»« khoĂ¡ sealed, khĂ´ng cho phĂ©p class nĂ o káº¿ thá»«a tá»« nĂ³. NĂªn dĂ¹ng khi muá»‘n ngÄƒn viá»‡c má»Ÿ rá»™ng class Ä‘á»ƒ Ä‘áº£m báº£o tĂ­nh toĂ n váº¹n logic, vĂ­ dá»¥ class String trong .NET lĂ  sealed. Sealed cÅ©ng giĂºp CLR tá»‘i Æ°u hiá»‡u nÄƒng vĂ¬ khĂ´ng cáº§n tra báº£ng vtable khi gá»i phÆ°Æ¡ng thá»©c.",
+        "topic":  "Inheritance",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  27,
+        "question":  "Tá»« khoĂ¡ \u0027base\u0027 trong C# dĂ¹ng Ä‘á»ƒ lĂ m gĂ¬?",
+        "ground_truth":  "Tá»« khoĂ¡ \u0027base\u0027 dĂ¹ng Ä‘á»ƒ truy cáº­p thĂ nh viĂªn cá»§a class cha tá»« bĂªn trong class con. Hai trÆ°á»ng há»£p phá»• biáº¿n: gá»i constructor cá»§a class cha báº±ng base() trong constructor class con, vĂ­ dá»¥ public Dog(string name) : base(name); vĂ  gá»i phÆ°Æ¡ng thá»©c gá»‘c cá»§a class cha khi override, vĂ­ dá»¥ base.Speak() bĂªn trong phÆ°Æ¡ng thá»©c override Speak() cá»§a class con.",
+        "topic":  "Inheritance",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  28,
+        "question":  "Static class vĂ  static method trong C# khĂ¡c gĂ¬ so vá»›i instance class?",
+        "ground_truth":  "Static class khĂ´ng thá»ƒ táº¡o object, chá»‰ chá»©a static members, Ä‘Æ°á»£c truy cáº­p trá»±c tiáº¿p qua tĂªn class (vĂ­ dá»¥ Math.Sqrt()). Static method thuá»™c vá» class chá»© khĂ´ng thuá»™c vá» instance, khĂ´ng thá»ƒ dĂ¹ng \u0027this\u0027. Instance class cáº§n táº¡o object báº±ng new Ä‘á»ƒ sá»­ dá»¥ng. Static thĂ­ch há»£p cho utility/helper functions, cĂ²n instance dĂ¹ng khi má»—i object cáº§n tráº¡ng thĂ¡i riĂªng.",
+        "topic":  "Class/Object",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  29,
+        "question":  "Property trong C# lĂ  gĂ¬? Auto-implemented property hoáº¡t Ä‘á»™ng nhÆ° tháº¿ nĂ o?",
+        "ground_truth":  "Property lĂ  thĂ nh viĂªn cá»§a class cung cáº¥p cÆ¡ cháº¿ Ä‘á»c/ghi linh hoáº¡t cho field, bao gá»“m accessor get vĂ  set. Auto-implemented property (vĂ­ dá»¥: public string Name { get; set; }) Ä‘á»ƒ compiler tá»± táº¡o backing field áº©n, giĂºp code ngáº¯n gá»n hÆ¡n. CĂ³ thá»ƒ thĂªm logic validation trong get/set, hoáº·c dĂ¹ng init thay set Ä‘á»ƒ chá»‰ cho gĂ¡n giĂ¡ trá»‹ lĂºc khá»Ÿi táº¡o.",
+        "topic":  "Class/Object",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  30,
+        "question":  "Generics trong C# lĂ  gĂ¬? Táº¡i sao nĂªn dĂ¹ng List\u003cT\u003e thay vĂ¬ ArrayList?",
+        "ground_truth":  "Generics cho phĂ©p Ä‘á»‹nh nghÄ©a class/method vá»›i kiá»ƒu dá»¯ liá»‡u tham sá»‘ hoĂ¡ (type parameter T), giĂºp tĂ¡i sá»­ dá»¥ng code mĂ  váº«n Ä‘áº£m báº£o type-safety. List\u003cT\u003e kiá»ƒm tra kiá»ƒu táº¡i compile-time, khĂ´ng cáº§n boxing/unboxing cho value type nĂªn hiá»‡u nÄƒng tá»‘t hÆ¡n. ArrayList lÆ°u object nĂªn pháº£i cast thá»§ cĂ´ng, dá»… gĂ¢y lá»—i runtime InvalidCastException.",
+        "topic":  ".NET Collections",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  31,
+        "question":  "Boxing vĂ  Unboxing trong C# lĂ  gĂ¬? Táº¡i sao cáº§n trĂ¡nh?",
+        "ground_truth":  "Boxing lĂ  quĂ¡ trĂ¬nh chuyá»ƒn value type (int, double) thĂ nh object trĂªn heap. Unboxing lĂ  chuyá»ƒn ngÆ°á»£c object vá» value type. VĂ­ dá»¥: object obj = 42 (boxing); int x = (int)obj (unboxing). Cáº§n trĂ¡nh vĂ¬ boxing táº¡o object má»›i trĂªn heap gĂ¢y tá»‘n bá»™ nhá»› vĂ  giáº£m hiá»‡u nÄƒng, Ä‘áº·c biá»‡t trong vĂ²ng láº·p lá»›n. Generic collections giĂºp trĂ¡nh boxing.",
+        "topic":  ".NET Collections",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  32,
+        "question":  "Viáº¿t Ä‘oáº¡n code LINQ Ä‘á»ƒ lá»c danh sĂ¡ch sinh viĂªn cĂ³ Ä‘iá»ƒm \u003e= 5.0 vĂ  sáº¯p xáº¿p theo tĂªn.",
+        "ground_truth":  "Code máº«u: var result = students.Where(s =\u003e s.Score \u003e= 5.0).OrderBy(s =\u003e s.Name).ToList(); PhÆ°Æ¡ng thá»©c Where() lá»c cĂ¡c sinh viĂªn cĂ³ Ä‘iá»ƒm tá»« 5.0 trá»Ÿ lĂªn, OrderBy() sáº¯p xáº¿p theo tĂªn theo thá»© tá»± A-Z, ToList() chuyá»ƒn káº¿t quáº£ IEnumerable thĂ nh List cá»¥ thá»ƒ. ÄĂ¢y lĂ  method syntax, cÅ©ng cĂ³ thá»ƒ viáº¿t báº±ng query syntax: from s in students where s.Score \u003e= 5.0 orderby s.Name select s.",
+        "topic":  "LINQ",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  33,
+        "question":  "Giáº£i thĂ­ch sá»± khĂ¡c nhau giá»¯a IEnumerable\u003cT\u003e vĂ  ICollection\u003cT\u003e trong C#.",
+        "ground_truth":  "IEnumerable\u003cT\u003e lĂ  interface cÆ¡ báº£n nháº¥t, chá»‰ há»— trá»£ duyá»‡t tuáº§n tá»± (foreach) qua GetEnumerator(), thá»±c hiá»‡n lazy evaluation. ICollection\u003cT\u003e káº¿ thá»«a IEnumerable\u003cT\u003e vĂ  bá»• sung thĂªm Count, Add(), Remove(), Contains(), Clear() cho phĂ©p thao tĂ¡c thĂªm/xĂ³a. DĂ¹ng IEnumerable khi chá»‰ cáº§n Ä‘á»c dá»¯ liá»‡u, dĂ¹ng ICollection khi cáº§n modify collection.",
+        "topic":  ".NET Collections",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  34,
+        "question":  "CĂ¡ch táº¡o custom exception trong C# nhÆ° tháº¿ nĂ o?",
+        "ground_truth":  "Táº¡o custom exception báº±ng cĂ¡ch káº¿ thá»«a tá»« class Exception. VĂ­ dá»¥: public class InsufficientBalanceException : Exception { public decimal Amount { get; } public InsufficientBalanceException(decimal amount) : base($\"Sá»‘ dÆ° khĂ´ng Ä‘á»§: {amount}\") { Amount = amount; } }. NĂªn thĂªm constructor nháº­n message vĂ  inner exception. Custom exception giĂºp xá»­ lĂ½ lá»—i nghiá»‡p vá»¥ cá»¥ thá»ƒ rĂµ rĂ ng hÆ¡n.",
+        "topic":  "Exception Handling",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  35,
+        "question":  "Lambda expression trong C# lĂ  gĂ¬? NĂ³ liĂªn quan gĂ¬ Ä‘áº¿n delegate?",
+        "ground_truth":  "Lambda expression lĂ  cĂº phĂ¡p viáº¿t táº¯t Ä‘á»ƒ táº¡o anonymous method. CĂº phĂ¡p: (parameters) =\u003e expression hoáº·c (parameters) =\u003e { statements }. Lambda cĂ³ thá»ƒ gĂ¡n cho delegate, Func\u003c\u003e, Action\u003c\u003e. VĂ­ dá»¥: Func\u003cint, int, int\u003e add = (a, b) =\u003e a + b;. Lambda lĂ  ná»n táº£ng cá»§a LINQ, cho phĂ©p viáº¿t Ä‘iá»u kiá»‡n lá»c/chá»n inline ngáº¯n gá»n nhÆ° list.Where(x =\u003e x \u003e 5).",
+        "topic":  "Delegates",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  36,
+        "question":  "Func\u003cT\u003e vĂ  Action\u003cT\u003e trong C# khĂ¡c nhau nhÆ° tháº¿ nĂ o?",
+        "ground_truth":  "Func\u003cT\u003e lĂ  delegate generic cĂ³ giĂ¡ trá»‹ tráº£ vá», tham sá»‘ cuá»‘i cĂ¹ng lĂ  kiá»ƒu tráº£ vá». VĂ­ dá»¥: Func\u003cint, int, int\u003e add Ä‘áº¡i diá»‡n phÆ°Æ¡ng thá»©c nháº­n 2 int vĂ  tráº£ vá» int. Action\u003cT\u003e lĂ  delegate generic KHĂ”NG cĂ³ giĂ¡ trá»‹ tráº£ vá» (void). VĂ­ dá»¥: Action\u003cstring\u003e print Ä‘áº¡i diá»‡n phÆ°Æ¡ng thá»©c nháº­n string vĂ  khĂ´ng tráº£ vá» gĂ¬. Cáº£ hai thÆ°á»ng dĂ¹ng vá»›i lambda expression.",
+        "topic":  "Delegates",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  37,
+        "question":  "Viáº¿t code minh hoáº¡ viá»‡c sá»­ dá»¥ng event trong C# theo mĂ´ hĂ¬nh Publisher-Subscriber.",
+        "ground_truth":  "Publisher khai bĂ¡o event: public event EventHandler\u003cstring\u003e OnMessageSent; vĂ  phĂ¡t sá»± kiá»‡n: OnMessageSent?.Invoke(this, \"Hello\");. Subscriber Ä‘Äƒng kĂ½: publisher.OnMessageSent += (sender, msg) =\u003e Console.WriteLine(msg);. ToĂ¡n tá»­ ?. kiá»ƒm tra null trÆ°á»›c khi invoke Ä‘á»ƒ trĂ¡nh NullReferenceException khi chÆ°a cĂ³ subscriber nĂ o Ä‘Äƒng kĂ½. MĂ´ hĂ¬nh nĂ y giĂºp giáº£m coupling giá»¯a cĂ¡c thĂ nh pháº§n.",
+        "topic":  "Events",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  38,
+        "question":  "Giáº£i thĂ­ch LINQ GroupBy() trong C# vĂ  cho vĂ­ dá»¥ thá»±c táº¿.",
+        "ground_truth":  "GroupBy() nhĂ³m cĂ¡c pháº§n tá»­ theo má»™t key chung, tráº£ vá» IGrouping\u003cTKey, TElement\u003e. VĂ­ dá»¥ nhĂ³m sinh viĂªn theo lá»›p: var groups = students.GroupBy(s =\u003e s.ClassName); Duyá»‡t: foreach(var g in groups) { Console.WriteLine(g.Key); foreach(var sv in g) Console.WriteLine(sv.Name); }. ThÆ°á»ng káº¿t há»£p Select() Ä‘á»ƒ táº¡o thá»‘ng kĂª: .GroupBy(s =\u003e s.ClassName).Select(g =\u003e new { Class = g.Key, Count = g.Count() }).",
+        "topic":  "LINQ",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  39,
+        "question":  "Giáº£i thĂ­ch cĂ¡ch hoáº¡t Ä‘á»™ng cá»§a async void vĂ  táº¡i sao nĂªn trĂ¡nh dĂ¹ng nĂ³.",
+        "ground_truth":  "Async void lĂ  phÆ°Æ¡ng thá»©c async khĂ´ng tráº£ vá» Task, nĂªn khĂ´ng thá»ƒ await, khĂ´ng thá»ƒ báº¯t exception tá»« bĂªn ngoĂ i báº±ng try-catch. Náº¿u exception xáº£y ra bĂªn trong async void, nĂ³ sáº½ crash á»©ng dá»¥ng vĂ¬ Ä‘Æ°á»£c nĂ©m lĂªn SynchronizationContext. Chá»‰ nĂªn dĂ¹ng async void cho event handler (báº¯t buá»™c bá»Ÿi signature). Trong má»i trÆ°á»ng há»£p khĂ¡c, luĂ´n dĂ¹ng async Task.",
+        "topic":  "Async/Await",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  40,
+        "question":  "Code First migration trong Entity Framework Core thá»±c hiá»‡n nhÆ° tháº¿ nĂ o?",
+        "ground_truth":  "Code First migration gá»“m 3 bÆ°á»›c: (1) Táº¡o/sá»­a cĂ¡c entity class vĂ  DbContext; (2) Cháº¡y lá»‡nh Add-Migration TenMigration trong Package Manager Console Ä‘á»ƒ sinh file migration chá»©a cĂ¡c thay Ä‘á»•i schema; (3) Cháº¡y Update-Database Ä‘á»ƒ Ă¡p dá»¥ng migration vĂ o database thá»±c táº¿. CĂ³ thá»ƒ rollback báº±ng Update-Database TenMigrationTruoc. Migration giĂºp quáº£n lĂ½ phiĂªn báº£n database song song vá»›i source code.",
+        "topic":  "Entity Framework Core",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  41,
+        "question":  "Dependency Injection (DI) trong .NET lĂ  gĂ¬? Táº¡i sao nĂ³ quan trá»ng?",
+        "ground_truth":  "Dependency Injection lĂ  design pattern trong Ä‘Ă³ cĂ¡c dependency (Ä‘á»‘i tÆ°á»£ng phá»¥ thuá»™c) Ä‘Æ°á»£c truyá»n vĂ o tá»« bĂªn ngoĂ i thay vĂ¬ táº¡o bĂªn trong class. Trong .NET, DI Ä‘Æ°á»£c tĂ­ch há»£p sáºµn qua IServiceCollection vá»›i 3 lifetime: Transient (táº¡o má»›i má»—i láº§n), Scoped (má»—i request), Singleton (má»™t láº§n duy nháº¥t). DI giĂºp giáº£m coupling, dá»… unit test báº±ng cĂ¡ch mock dependency, vĂ  tuĂ¢n thá»§ nguyĂªn táº¯c SOLID.",
+        "topic":  "OOP Principles",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  42,
+        "question":  "Repository Pattern lĂ  gĂ¬? NĂ³ giĂºp gĂ¬ trong kiáº¿n trĂºc phĂ¢n lá»›p?",
+        "ground_truth":  "Repository Pattern lĂ  lá»›p trung gian Ä‘Ă³ng gĂ³i logic truy cáº­p dá»¯ liá»‡u, tĂ¡ch biá»‡t Business Layer khá»i Data Access Layer. Interface IRepository\u003cT\u003e Ä‘á»‹nh nghÄ©a cĂ¡c phÆ°Æ¡ng thá»©c CRUD chung (GetAll, GetById, Add, Update, Delete). Concrete class GenericRepository\u003cT\u003e triá»ƒn khai báº±ng EF Core DbContext. Lá»£i Ă­ch: dá»… thay Ä‘á»•i ORM, dá»… unit test báº±ng mock repository, code business logic sáº¡ch hÆ¡n.",
+        "topic":  "OOP Principles",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  43,
+        "question":  "Viáº¿t code xá»­ lĂ½ ngoáº¡i lá»‡ khi chia cho 0 vĂ  khi nháº­p sai Ä‘á»‹nh dáº¡ng sá»‘ trong C#.",
+        "ground_truth":  "try { Console.Write(\"Nháº­p a: \"); int a = int.Parse(Console.ReadLine()); Console.Write(\"Nháº­p b: \"); int b = int.Parse(Console.ReadLine()); Console.WriteLine(a / b); } catch (FormatException) { Console.WriteLine(\"Vui lĂ²ng nháº­p sá»‘ nguyĂªn há»£p lá»‡.\"); } catch (DivideByZeroException) { Console.WriteLine(\"KhĂ´ng thá»ƒ chia cho 0.\"); } finally { Console.WriteLine(\"Káº¿t thĂºc chÆ°Æ¡ng trĂ¬nh.\"); }. Catch cá»¥ thá»ƒ Ä‘áº·t trÆ°á»›c catch tá»•ng quĂ¡t.",
+        "topic":  "Exception Handling",
+        "difficulty":  "easy"
+    },
+    {
+        "id":  44,
+        "question":  "Sá»± khĂ¡c nhau giá»¯a \u0027is\u0027 vĂ  \u0027as\u0027 trong C# khi Ă©p kiá»ƒu lĂ  gĂ¬?",
+        "ground_truth":  "ToĂ¡n tá»­ \u0027is\u0027 kiá»ƒm tra xem object cĂ³ thuá»™c kiá»ƒu nĂ o Ä‘Ă³ khĂ´ng, tráº£ vá» bool. VĂ­ dá»¥: if (animal is Dog d) cho phĂ©p kiá»ƒm tra vĂ  Ă©p kiá»ƒu trong cĂ¹ng má»™t lá»‡nh (pattern matching). ToĂ¡n tá»­ \u0027as\u0027 thá»±c hiá»‡n Ă©p kiá»ƒu an toĂ n, tráº£ vá» null náº¿u tháº¥t báº¡i thay vĂ¬ nĂ©m InvalidCastException. VĂ­ dá»¥: Dog d = animal as Dog; if (d != null) d.Bark();. Cáº£ hai Ä‘á»u an toĂ n hÆ¡n so vá»›i cast trá»±c tiáº¿p (Dog)animal.",
+        "topic":  "Polymorphism",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  45,
+        "question":  "LINQ Join trong C# hoáº¡t Ä‘á»™ng nhÆ° tháº¿ nĂ o? Cho vĂ­ dá»¥ join hai danh sĂ¡ch.",
+        "ground_truth":  "LINQ Join káº¿t há»£p hai collection dá»±a trĂªn key chung, tÆ°Æ¡ng tá»± INNER JOIN trong SQL. VĂ­ dá»¥: var result = students.Join(classes, s =\u003e s.ClassId, c =\u003e c.ClassId, (s, c) =\u003e new { s.Name, c.ClassName }); Tham sá»‘ láº§n lÆ°á»£t: collection cáº§n join, key cá»§a collection bĂªn trĂ¡i, key bĂªn pháº£i, vĂ  hĂ m chá»n káº¿t quáº£. Káº¿t quáº£ chá»‰ chá»©a cĂ¡c cáº·p cĂ³ key khá»›p nhau.",
+        "topic":  "LINQ",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  46,
+        "question":  "Giáº£i thĂ­ch má»‘i quan há»‡ One-to-Many trong Entity Framework Core vĂ  cĂ¡ch cáº¥u hĂ¬nh.",
+        "ground_truth":  "One-to-Many lĂ  quan há»‡ mĂ  má»™t entity cha cĂ³ nhiá»u entity con. VĂ­ dá»¥: má»™t Subject cĂ³ nhiá»u Chapter. Cáº¥u hĂ¬nh báº±ng navigation property: class Subject chá»©a ICollection\u003cChapter\u003e Chapters, class Chapter chá»©a int SubjectId (FK) vĂ  Subject Subject. EF Core tá»± phĂ¡t hiá»‡n quan há»‡ qua convention. CĂ³ thá»ƒ cáº¥u hĂ¬nh tÆ°á»ng minh báº±ng Fluent API: HasOne(c =\u003e c.Subject).WithMany(s =\u003e s.Chapters).HasForeignKey(c =\u003e c.SubjectId).",
+        "topic":  "Entity Framework Core",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  47,
+        "question":  "Struct trong C# khĂ¡c gĂ¬ so vá»›i class? Khi nĂ o nĂªn dĂ¹ng struct?",
+        "ground_truth":  "Struct lĂ  value type Ä‘Æ°á»£c lÆ°u trĂªn stack, class lĂ  reference type Ä‘Æ°á»£c lÆ°u trĂªn heap. Struct khĂ´ng há»— trá»£ káº¿ thá»«a (trá»« implement interface), khĂ´ng cĂ³ destructor, gĂ¡n giĂ¡ trá»‹ sáº½ táº¡o báº£n sao. NĂªn dĂ¹ng struct khi Ä‘á»‘i tÆ°á»£ng nhá», immutable, vĂ  Ä‘Æ°á»£c táº¡o/huá»· thÆ°á»ng xuyĂªn (vĂ­ dá»¥ Point, Color, DateTime) Ä‘á»ƒ trĂ¡nh overhead cá»§a garbage collection trĂªn heap.",
+        "topic":  "Class/Object",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  48,
+        "question":  "Viáº¿t code sá»­ dá»¥ng Dictionary Ä‘á»ƒ Ä‘áº¿m táº§n suáº¥t xuáº¥t hiá»‡n cá»§a tá»«ng tá»« trong má»™t chuá»—i.",
+        "ground_truth":  "string text = \"hello world hello csharp world hello\"; var words = text.Split(\u0027 \u0027); var freq = new Dictionary\u003cstring, int\u003e(); foreach(var w in words) { if(freq.ContainsKey(w)) freq[w]++; else freq[w] = 1; } Hoáº·c dĂ¹ng LINQ ngáº¯n gá»n hÆ¡n: var freq = text.Split(\u0027 \u0027).GroupBy(w =\u003e w).ToDictionary(g =\u003e g.Key, g =\u003e g.Count()); Káº¿t quáº£: hello=3, world=2, csharp=1.",
+        "topic":  ".NET Collections",
+        "difficulty":  "medium"
+    },
+    {
+        "id":  49,
+        "question":  "Deadlock trong async/await C# xáº£y ra khi nĂ o? CĂ¡ch phĂ²ng trĂ¡nh?",
+        "ground_truth":  "Deadlock xáº£y ra khi gá»i .Result hoáº·c .Wait() trĂªn Task trong mĂ´i trÆ°á»ng cĂ³ SynchronizationContext (WPF, ASP.NET cÅ©). Thread chĂ­nh bá»‹ block chá» Task hoĂ n thĂ nh, nhÆ°ng Task cáº§n quay láº¡i thread chĂ­nh sau await nĂªn bá»‹ káº¹t. CĂ¡ch trĂ¡nh: (1) LuĂ´n dĂ¹ng await thay vĂ¬ .Result/.Wait(); (2) ThĂªm ConfigureAwait(false) khi khĂ´ng cáº§n quay vá» context gá»‘c; (3) DĂ¹ng async xuyĂªn suá»‘t tá»« trĂªn xuá»‘ng dÆ°á»›i.",
+        "topic":  "Async/Await",
+        "difficulty":  "hard"
+    },
+    {
+        "id":  50,
+        "question":  "So sĂ¡nh Eager Loading, Lazy Loading vĂ  Explicit Loading trong Entity Framework Core.",
+        "ground_truth":  "Eager Loading dĂ¹ng Include() Ä‘á»ƒ load dá»¯ liá»‡u liĂªn quan ngay trong cĂ¢u query gá»‘c, trĂ¡nh N+1 query. Lazy Loading tá»± Ä‘á»™ng load navigation property khi truy cáº­p láº§n Ä‘áº§u, cáº§n cĂ i package Proxies vĂ  Ä‘Ă¡nh dáº¥u property lĂ  virtual. Explicit Loading dĂ¹ng Entry().Reference().Load() Ä‘á»ƒ chá»§ Ä‘á»™ng load khi cáº§n. Eager Loading phĂ¹ há»£p khi biáº¿t trÆ°á»›c cáº§n dá»¯ liá»‡u liĂªn quan, Lazy Loading tiá»‡n nhÆ°ng dá»… gĂ¢y N+1 performance issue.",
+        "topic":  "Entity Framework Core",
+        "difficulty":  "hard"
+    }
+]
