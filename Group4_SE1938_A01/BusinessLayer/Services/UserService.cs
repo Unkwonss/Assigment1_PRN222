@@ -18,7 +18,7 @@ namespace BusinessLayer.Services
         private readonly IGenericRepository<ChatSession> _chatSessionRepository;
         private readonly EmailService _emailService;
         private readonly IConfiguration _configuration;
-        private const string DEFAULT_PASSWORD = "FptStudent@123";
+        private string DefaultPassword => _configuration["DefaultStudentPassword"] ?? "fpt12345";
 
         public UserService(
             IGenericRepository<User> userRepository,
@@ -71,7 +71,7 @@ namespace BusinessLayer.Services
             var user = new User
             {
                 Username = username,
-                PasswordHash = HashPassword(DEFAULT_PASSWORD),
+                PasswordHash = HashPassword(DefaultPassword),
                 FullName = fullName,
                 Email = email,
                 Role = "Student"
@@ -89,7 +89,7 @@ namespace BusinessLayer.Services
                     <div style='background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;'>
                         <p style='margin: 8px 0; color: #475569;'><b>Tên tài khoản (Username):</b> {username}</p>
                         <p style='margin: 8px 0; color: #475569;'><b>Email đăng nhập:</b> {email}</p>
-                        <p style='margin: 8px 0; color: #e11d48;'><b>Mật khẩu mặc định:</b> {DEFAULT_PASSWORD}</p>
+                        <p style='margin: 8px 0; color: #e11d48;'><b>Mật khẩu mặc định:</b> {DefaultPassword}</p>
                     </div>
                     <p style='color: #ef4444; font-weight: bold;'>* Lưu ý quan trọng: Bạn bắt buộc phải đổi mật khẩu mặc định ngay ở lần đăng nhập đầu tiên tại trang cá nhân (Profile) để kích hoạt toàn bộ tính năng.</p>
                     <p style='color: #94a3b8; font-size: 12px; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 15px;'>Thư này được gửi tự động bởi hệ thống Quản lý học liệu PRN222 FPT.</p>
@@ -156,7 +156,7 @@ namespace BusinessLayer.Services
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null) return false;
 
-            return user.PasswordHash == HashPassword(DEFAULT_PASSWORD);
+            return user.PasswordHash == HashPassword(DefaultPassword);
         }
 
         private UserDto? MapToDto(User? user)
