@@ -8,20 +8,24 @@ using BusinessLayer.Interfaces;
 using System.IO;
 using System.Text.Json;
 using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
+using Domain.Models;
 using PresentationLayer.Models;
 
 namespace PresentationLayer.Controllers
 {
-    [Authorize(Roles = "Teacher,Admin")]
+    [Authorize(Roles = "Admin")]
     public class BenchmarkController : Controller
     {
         private readonly IBenchmarkService _benchmarkService;
         private readonly IDocumentService _documentService;
+        private readonly Prn222AssigmentContext _context;
 
-        public BenchmarkController(IBenchmarkService benchmarkService, IDocumentService documentService)
+        public BenchmarkController(IBenchmarkService benchmarkService, IDocumentService documentService, Prn222AssigmentContext context)
         {
             _benchmarkService = benchmarkService;
             _documentService = documentService;
+            _context = context;
         }
 
         [HttpGet]
@@ -237,6 +241,115 @@ namespace PresentationLayer.Controllers
                 AvgLatencyMs     = r.LatencyMilliseconds,
                 RunAt            = r.TestedAt ?? DateTime.UtcNow
             }).ToList();
+
+            // 1. Thống kê token theo tài khoản
+            var tokenStats = await _context.ChatHistories
+                .Include(h => h.Session)
+                .ThenInclude(s => s.User)
+                .GroupBy(h => new { h.Session.User.UserId, h.Session.User.FullName, h.Session.User.Email })
+                .Select(g => new UserTokenStatsViewModel
+                {
+                    UserId = g.Key.UserId,
+                    FullName = g.Key.FullName,
+                    Email = g.Key.Email,
+                    TotalTokensIn = g.Sum(h => h.TokensIn ?? 0),
+                    TotalTokensOut = g.Sum(h => h.TokensOut ?? 0),
+                    MessageCount = g.Count()
+                })
+                .OrderByDescending(x => x.TotalTokensIn + x.TotalTokensOut)
+                .ToListAsync();
+
+            ViewBag.TokenStats = tokenStats;
+
+            // 2. So sánh hiệu năng AI Models (Latency, MRR, Precision, Recall)
+            var modelComparison = await _context.BenchmarkResults
+                .Include(r => r.Experiment)
+                .ThenInclude(e => e.Aimodel)
+                .GroupBy(r => r.Experiment.Aimodel.ModelName)
+                .Select(g => new ModelComparisonViewModel
+                {
+                    ModelName = g.Key,
+                    AvgPrecision = g.Average(r => r.ContextPrecisionScore ?? 0.0),
+                    AvgRecall = g.Average(r => r.ContextRecallScore ?? 0.0),
+                    AvgMRR = g.Average(r => r.FaithfulnessScore ?? 0.0),
+                    AvgLatency = g.Average(r => r.LatencyMilliseconds),
+                    TestCount = g.Count()
+                })
+                .ToListAsync();
+
+            ViewBag.ModelComparison = modelComparison;
+
+            var topDocs = await _context.ChatCitations
+                .Include(c => c.Chunk)
+                .ThenInclude(ch => ch.Index)
+                .ThenInclude(idx => idx.Document)
+                .GroupBy(c => new { c.Chunk.Index.Document.Title, c.Chunk.Index.Document.FileName })
+                .Select(g => new TopDocumentViewModel
+                {
+                    Title = g.Key.Title,
+                    FileName = g.Key.FileName,
+                    CitationCount = g.Count()
+                })
+                .OrderByDescending(x => x.CitationCount)
+                .Take(10)
+                .ToListAsync();
+
+            ViewBag.TopDocs = topDocs;
+
+            // 4. Daily Token Allocation over time (last 30 days)
+            var startDate = DateTime.UtcNow.AddDays(-30);
+            var tokenOverTime = await _context.ChatHistories
+                .Where(h => h.Timestamp != null && h.Timestamp >= startDate)
+                .GroupBy(h => h.Timestamp.Value.Date)
+                .Select(g => new {
+                    Date = g.Key,
+                    PromptTokens = g.Sum(h => h.TokensIn ?? 0),
+                    CompletionTokens = g.Sum(h => h.TokensOut ?? 0)
+                })
+                .OrderBy(x => x.Date)
+                .ToListAsync();
+            
+            // Map to TokenOverTimeViewModel list so Razor can serialize it
+            ViewBag.TokenOverTime = tokenOverTime.Select(x => new TokenOverTimeViewModel {
+                DateStr = x.Date.ToString("dd/MM"),
+                PromptTokens = x.PromptTokens,
+                CompletionTokens = x.CompletionTokens
+            }).ToList();
+
+            // 5. Hourly Activity by Hour of Day (0-23)
+            var hourlyActivity = await _context.ChatHistories
+                .Where(h => h.Timestamp != null)
+                .GroupBy(h => h.Timestamp.Value.Hour)
+                .Select(g => new HourlyActivityViewModel {
+                    Hour = g.Key,
+                    Count = g.Count()
+                })
+                .OrderBy(x => x.Hour)
+                .ToListAsync();
+            
+            ViewBag.HourlyActivity = hourlyActivity;
+
+            // 6. Word Cloud Keyword Frequency (Top 30 words in user questions)
+            var messages = await _context.ChatHistories
+                .Select(h => h.UserMessage)
+                .ToListAsync();
+
+            var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+                "và", "là", "của", "cho", "tôi", "em", "với", "trong", "có", "không", "gì", "này", "cái", "để", "làm", "sao", "thế", "nào", "được", "bị", "đi", "ra", "vào", "lên", "xuống", "đã", "đang", "sẽ", "nhé", "nha", "ạ", "ơi", "thầy", "cô", "bài", "môn", "học", "hỏi", "giúp", "về", "cách", "hướng", "dẫn", "như", "câu", "tài", "liệu", "giáo", "trình", "bản", "bản vẽ", "thông", "tin", "cho tôi", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín", "mười", "nếu", "thì", "khi",
+                "the", "to", "and", "a", "an", "is", "of", "in", "for", "on", "with", "at", "by", "from", "how", "what", "why", "who", "where", "which"
+            };
+
+            var wordFreqs = messages
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .SelectMany(m => m.ToLower().Split(new[] { ' ', '.', ',', '?', '!', ';', ':', '-', '(', ')', '[', ']', '{', '}', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                .Where(w => w.Length > 1 && !stopWords.Contains(w) && !int.TryParse(w, out _))
+                .GroupBy(w => w)
+                .Select(g => new WordFrequencyViewModel { Word = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count)
+                .Take(25)
+                .ToList();
+
+            ViewBag.WordCloud = wordFreqs;
 
             return View(viewModels);
         }

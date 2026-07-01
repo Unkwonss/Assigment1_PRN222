@@ -12,6 +12,9 @@ using Microsoft.Extensions.Logging;
 using BusinessLayer.DTOs;
 using BusinessLayer.Interfaces;
 
+using Microsoft.AspNetCore.SignalR;
+using PresentationLayer.Hubs;
+
 namespace PresentationLayer.Controllers
 {
     [Authorize]
@@ -20,12 +23,14 @@ namespace PresentationLayer.Controllers
         private readonly IChatService _chatService;
         private readonly IDocumentService _documentService;
         private readonly ILogger<ChatController> _logger;
+        private readonly IHubContext<NewsHub> _hubContext;
 
-        public ChatController(IChatService chatService, IDocumentService documentService, ILogger<ChatController> logger)
+        public ChatController(IChatService chatService, IDocumentService documentService, ILogger<ChatController> logger, IHubContext<NewsHub> hubContext)
         {
             _chatService = chatService;
             _documentService = documentService;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -41,6 +46,16 @@ namespace PresentationLayer.Controllers
             return View(subjects);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetSubjects()
+        {
+            var subjects = await _documentService.GetAllSubjectsAsync();
+            return Json(subjects.Select(s => new {
+                s.SubjectId,
+                s.SubjectCode,
+                s.SubjectName
+            }));
+        }
         // --- AJAX Chat Session Operations ---
 
         [HttpGet]
@@ -243,6 +258,22 @@ namespace PresentationLayer.Controllers
                 return Json(new { success = false, step = 3, message = $"Lỗi trích xuất văn bản: {ex.Message}" });
             }
 
+            // Check duplicate filename in chapter
+            try
+            {
+                var existingDocs = await _documentService.GetDocumentsByChapterIdAsync(chapter.ChapterId);
+                var duplicate = existingDocs.FirstOrDefault(d => d.FileName.Equals(file.FileName, StringComparison.OrdinalIgnoreCase));
+                if (duplicate != null)
+                {
+                    _logger.LogInformation("Duplicate student document detected: {FileName}. Deleting old document (Id={DocId}) first.", file.FileName, duplicate.DocumentId);
+                    await _documentService.DeleteDocumentAsync(duplicate.DocumentId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to check or delete duplicate student document: {Message}", ex.Message);
+            }
+
             // BƯỚC 4 & 5: Lưu tài liệu + Chunking
             var doc = new DocumentDto
             {
@@ -269,19 +300,34 @@ namespace PresentationLayer.Controllers
             // BƯỚC 6: Embedding + Lập chỉ mục (Index)
             try
             {
-                var models     = await _documentService.GetAllEmbeddingModelsAsync();
-                var strategies = await _documentService.GetAllChunkingStrategiesAsync();
-                var model      = models.FirstOrDefault();
-                var strategy   = strategies.FirstOrDefault();
+                var subject = await _documentService.GetSubjectByIdAsync(subjectId);
+                int modelId = subject?.DefaultModelId ?? 0;
+                int strategyId = subject?.DefaultStrategyId ?? 0;
+                int chunkSize = subject?.DefaultChunkSize ?? 500;
+                int chunkOverlap = subject?.DefaultChunkOverlap ?? 100;
 
-                if (model != null && strategy != null)
+                // Fallbacks if not configured
+                if (modelId == 0 || strategyId == 0)
+                {
+                    var models     = await _documentService.GetAllEmbeddingModelsAsync();
+                    var strategies = await _documentService.GetAllChunkingStrategiesAsync();
+                    var model      = models.FirstOrDefault();
+                    var strategy   = strategies.FirstOrDefault();
+                    if (model != null && strategy != null)
+                    {
+                        modelId = model.ModelId;
+                        strategyId = strategy.StrategyId;
+                    }
+                }
+
+                if (modelId > 0 && strategyId > 0)
                 {
                     await _documentService.IndexDocumentAsync(
                         doc.DocumentId,
-                        model.ModelId,
-                        strategy.StrategyId,
-                        chunkSize: 500,
-                        chunkOverlap: 100
+                        modelId,
+                        strategyId,
+                        chunkSize,
+                        chunkOverlap
                     );
                 }
                 else
@@ -297,6 +343,8 @@ namespace PresentationLayer.Controllers
             }
 
             // BƯỚC 7: Trả về thành công
+            await _hubContext.Clients.All.SendAsync("ReceiveDocumentUpdate", chapter.ChapterId);
+
             return Json(new
             {
                 success    = true,

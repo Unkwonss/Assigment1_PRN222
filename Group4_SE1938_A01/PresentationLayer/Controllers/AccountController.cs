@@ -155,22 +155,25 @@ namespace PresentationLayer.Controllers
         {
             var allUsers = await _userService.GetAllUsersAsync();
 
+            // --- FILTER OUT ADMIN ACCOUNTS ---
+            var nonAdminUsers = allUsers.Where(u => !string.Equals(u.Role, "Admin", StringComparison.OrdinalIgnoreCase)).ToList();
+
             // --- Server-side FILTERING (LINQ) ---
-            IEnumerable<UserDto> filteredUsers = allUsers;
+            IEnumerable<UserDto> filteredUsers = nonAdminUsers;
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 var term = searchTerm.Trim().ToLower();
                 filteredUsers = filteredUsers.Where(u =>
-                    u.FullName.ToLower().Contains(term) ||
-                    u.Email.ToLower().Contains(term) ||
-                    u.Username.ToLower().Contains(term)
+                    (u.FullName ?? "").ToLower().Contains(term) ||
+                    (u.Email ?? "").ToLower().Contains(term) ||
+                    (u.Username ?? "").ToLower().Contains(term)
                 );
             }
 
             if (!string.IsNullOrWhiteSpace(roleFilter))
             {
-                filteredUsers = filteredUsers.Where(u => u.Role == roleFilter);
+                filteredUsers = filteredUsers.Where(u => string.Equals(u.Role, roleFilter, StringComparison.OrdinalIgnoreCase));
             }
 
             // --- Server-side SORTING (LINQ) ---
@@ -179,10 +182,10 @@ namespace PresentationLayer.Controllers
 
             filteredUsers = sortBy.ToLower() switch
             {
-                "email"    => sortOrder == "desc" ? filteredUsers.OrderByDescending(u => u.Email)    : filteredUsers.OrderBy(u => u.Email),
-                "role"     => sortOrder == "desc" ? filteredUsers.OrderByDescending(u => u.Role)     : filteredUsers.OrderBy(u => u.Role),
-                "username" => sortOrder == "desc" ? filteredUsers.OrderByDescending(u => u.Username) : filteredUsers.OrderBy(u => u.Username),
-                _          => sortOrder == "desc" ? filteredUsers.OrderByDescending(u => u.FullName) : filteredUsers.OrderBy(u => u.FullName),
+                "email"    => string.Equals(sortOrder, "desc", StringComparison.OrdinalIgnoreCase) ? filteredUsers.OrderByDescending(u => u.Email ?? "")    : filteredUsers.OrderBy(u => u.Email ?? ""),
+                "role"     => string.Equals(sortOrder, "desc", StringComparison.OrdinalIgnoreCase) ? filteredUsers.OrderByDescending(u => u.Role ?? "")     : filteredUsers.OrderBy(u => u.Role ?? ""),
+                "username" => string.Equals(sortOrder, "desc", StringComparison.OrdinalIgnoreCase) ? filteredUsers.OrderByDescending(u => u.Username ?? "") : filteredUsers.OrderBy(u => u.Username ?? ""),
+                _          => string.Equals(sortOrder, "desc", StringComparison.OrdinalIgnoreCase) ? filteredUsers.OrderByDescending(u => u.FullName ?? "") : filteredUsers.OrderBy(u => u.FullName ?? ""),
             };
 
             var viewModel = new UserSearchViewModel
@@ -190,7 +193,7 @@ namespace PresentationLayer.Controllers
                 SearchTerm    = searchTerm,
                 RoleFilter    = roleFilter,
                 Users         = filteredUsers,
-                TotalCount    = allUsers.Count(),
+                TotalCount    = nonAdminUsers.Count,
                 FilteredCount = filteredUsers.Count()
             };
 

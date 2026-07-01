@@ -17,6 +17,7 @@ namespace PresentationLayer
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+            builder.Services.AddSignalR();
             builder.Services.AddDbContext<Prn222AssigmentContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -207,6 +208,8 @@ namespace PresentationLayer
                 name: "default",
                 pattern: "{controller=Account}/{action=Login}/{id?}")
                 .WithStaticAssets();
+
+            app.MapHub<PresentationLayer.Hubs.NewsHub>("/newsHub");
 
             app.Run();
         }

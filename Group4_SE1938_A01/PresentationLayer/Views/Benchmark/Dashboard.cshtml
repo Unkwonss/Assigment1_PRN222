@@ -1,7 +1,7 @@
 @model List<PresentationLayer.Models.BenchmarkResultViewModel>
 
 @{
-    ViewData["Title"] = "Benchmark Dashboard";
+    ViewData["Title"] = "RAG System Analytics & Metrics Dashboard";
     
     // Find highest MRR for highlighting
     double maxMrr = Model.Any() ? Model.Max(x => x.MRR) : 0;
@@ -11,91 +11,336 @@
                           .Where(x => !string.IsNullOrEmpty(x))
                           .Distinct()
                           .ToList();
+
+    var tokenStats = ViewBag.TokenStats as List<PresentationLayer.Models.UserTokenStatsViewModel> ?? new List<PresentationLayer.Models.UserTokenStatsViewModel>();
+    var modelComparison = ViewBag.ModelComparison as List<PresentationLayer.Models.ModelComparisonViewModel> ?? new List<PresentationLayer.Models.ModelComparisonViewModel>();
+    var topDocs = ViewBag.TopDocs as List<PresentationLayer.Models.TopDocumentViewModel> ?? new List<PresentationLayer.Models.TopDocumentViewModel>();
+
+    // Determine the optimal AI Model
+    // Simple score: MRR * 0.4 + Precision * 0.3 + Recall * 0.3 - (LatencyMs / 10000.0)
+    string optimalModel = "N/A";
+    double bestScore = -999;
+    foreach(var mc in modelComparison)
+    {
+        double score = mc.AvgMRR * 0.4 + mc.AvgPrecision * 0.3 + mc.AvgRecall * 0.3 - (mc.AvgLatency / 10000.0);
+        if (score > bestScore)
+        {
+            bestScore = score;
+            optimalModel = mc.ModelName;
+        }
+    }
 }
 
-<div class="container mt-4">
-    <h2 class="mb-4"><i class="bi bi-graph-up text-primary"></i> Đánh giá So sánh RAG Models</h2>
+<style>
+    body {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        color: #f1f5f9;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
 
-    <!-- Filter & Export Controls -->
-    <div class="row mb-4 align-items-end">
-        <div class="col-md-4">
-            <label for="strategyFilter" class="form-label fw-bold">Lọc theo Chunking Strategy:</label>
-            <select id="strategyFilter" class="form-select">
-                <option value="">-- Tất cả Strategy --</option>
-                @foreach(var s in strategies)
-                {
-                    <option value="@s">@s</option>
-                }
-            </select>
+    .analytics-title {
+        background: linear-gradient(to right, #6366f1, #a855f7, #ec4899);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+    }
+
+    .card-glass {
+        background: rgba(30, 41, 59, 0.45);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card-glass:hover {
+        transform: translateY(-4px);
+        border-color: rgba(99, 102, 241, 0.3);
+        box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.15);
+    }
+
+    .header-gradient {
+        background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-glow-primary {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        border: none;
+        color: white;
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        transition: all 0.2s;
+        font-weight: 550;
+    }
+
+    .btn-glow-primary:hover {
+        transform: scale(1.02);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        color: white;
+    }
+
+    .text-glow {
+        text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    }
+
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .table-glass {
+        color: #e2e8f0;
+    }
+    .table-glass th {
+        background: rgba(15, 23, 42, 0.6) !important;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+        color: #94a3b8 !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    .table-glass td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        background: transparent !important;
+    }
+
+    .stat-badge {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+</style>
+
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+        <div>
+            <span class="badge bg-indigo bg-opacity-25 text-glow border border-indigo border-opacity-20 px-3 py-2 mb-2" style="color: #818cf8;">ADMIN & TEACHER ANALYTICS</span>
+            <h1 class="analytics-title display-5 mb-0">RAG Chatbot Dashboard</h1>
         </div>
-        <div class="col-md-8 text-end">
-            <button class="btn btn-success" onclick="exportTableToCSV('benchmark_results.csv')">
-                <i class="bi bi-file-earmark-excel"></i> Xuất CSV
+        <div class="d-flex gap-3">
+            <button class="btn btn-glow-primary px-4 py-2" onclick="exportTableToCSV('benchmark_results.csv')">
+                <i class="bi bi-file-earmark-excel-fill"></i> Xuất dữ liệu CSV
             </button>
+            <a href="@Url.Action("Index", "Benchmark")" class="btn btn-outline-light border-opacity-20 px-4 py-2">
+                <i class="bi bi-arrow-left"></i> Quay lại
+            </a>
         </div>
     </div>
 
-    <!-- Charts Section -->
-    <div class="row mb-5">
-        <div class="col-md-12">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
-                    <h5 class="card-title fw-bold">Biểu đồ so sánh Precision@3 & Recall@3</h5>
+    <!-- Quick Insights Row -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card card-glass p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="text-muted-custom small uppercase fw-bold mb-2">Total Queries Serviced</div>
+                    <h3 class="text-glow text-white font-weight-bold mb-1">@tokenStats.Sum(x => x.MessageCount)</h3>
+                    <div class="small text-indigo"><i class="bi bi-chat-left-dots-fill"></i> Chat logs lưu trong DB</div>
                 </div>
-                <div class="card-body">
-                    <canvas id="metricsChart" height="100"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-glass p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="text-muted-custom small uppercase fw-bold mb-2">Total Tokens Logged</div>
+                    <h3 class="text-glow text-white font-weight-bold mb-1">@tokenStats.Sum(x => x.TotalTokens).ToString("N0")</h3>
+                    <div class="small text-pink-500" style="color: #ec4899;"><i class="bi bi-activity"></i> Tổng In + Out</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-glass p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="text-muted-custom small uppercase fw-bold mb-2">RAG Knowledge Base</div>
+                    <h3 class="text-glow text-white font-weight-bold mb-1">@topDocs.Count tài liệu</h3>
+                    <div class="small text-warning"><i class="bi bi-file-earmark-text-fill"></i> Được trích dẫn sử dụng</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Data Table Section -->
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-striped align-middle mb-0" id="resultsTable">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Model</th>
-                            <th>Chunk Strategy</th>
-                            <th>Precision@3</th>
-                            <th>Recall@3</th>
-                            <th>MRR</th>
-                            <th>Avg Latency (ms)</th>
-                            <th>Thời gian test</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (!Model.Any())
-                        {
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">Không có dữ liệu benchmark nào được tìm thấy.</td>
-                            </tr>
-                        }
-                        else
-                        {
-                            foreach (var item in Model)
-                            {
-                                bool isBest = (item.MRR == maxMrr && maxMrr > 0);
-                                <tr class="data-row @(isBest ? "table-success fw-bold" : "")" data-strategy="@item.ChunkStrategy">
-                                    <td>@item.ModelName</td>
-                                    <td>@(string.IsNullOrEmpty(item.ChunkStrategy) ? "N/A" : item.ChunkStrategy)</td>
-                                    <td>@item.Precision3.ToString("0.000")</td>
-                                    <td>@item.Recall3.ToString("0.000")</td>
-                                    <td>
-                                        @item.MRR.ToString("0.000")
-                                        @if(isBest) { <span class="badge bg-danger ms-1">BEST</span> }
-                                    </td>
-                                    <td>@item.AvgLatencyMs.ToString("0.0")</td>
-                                    <td>@item.RunAt.ToString("dd/MM/yyyy HH:mm")</td>
+    <!-- Removed Benchmark AI Model Performance & Latency Charts Row -->
+
+    <!-- Token Usage per Account & Top Documents Row -->
+    <div class="row g-4 mb-5">
+        <!-- Token stats table -->
+        <div class="col-lg-6">
+            <div class="card card-glass h-100">
+                <div class="card-header header-gradient py-3 px-4">
+                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-people-fill text-indigo-400"></i> Thống kê Token & Câu hỏi của từng Account</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-glass align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Tài khoản</th>
+                                    <th class="text-center">Số câu hỏi</th>
+                                    <th class="text-center">Tokens (In / Out)</th>
+                                    <th class="text-end">Tổng Token</th>
                                 </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody>
+                                @if(!tokenStats.Any())
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-muted">Chưa có log chat token nào trong DB.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    foreach (var user in tokenStats)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="fw-bold text-white">@user.FullName</div>
+                                                <div class="small text-muted-custom">@user.Email</div>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-indigo bg-opacity-25 text-glow border border-indigo border-opacity-10">@user.MessageCount</span></td>
+                                            <td class="text-center small font-monospace text-glow" style="color: #34d399;">
+                                                @user.TotalTokensIn.ToString("N0") / @user.TotalTokensOut.ToString("N0")
+                                            </td>
+                                            <td class="text-end fw-bold text-info font-monospace">@user.TotalTokens.ToString("N0")</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Cited documents -->
+        <div class="col-lg-6">
+            <div class="card card-glass h-100">
+                <div class="card-header header-gradient py-3 px-4">
+                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-file-earmark-pdf-fill text-warning"></i> Tài liệu giáo trình trích dẫn nhiều nhất (RAG Context)</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-glass align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Tiêu đề tài liệu / File Name</th>
+                                    <th class="text-end">Số lần trích dẫn</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if(!topDocs.Any())
+                                {
+                                    <tr>
+                                        <td colspan="2" class="text-center py-4 text-muted">Chưa có tài liệu nào được trích dẫn trả lời.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    foreach (var doc in topDocs)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="fw-bold text-white">@doc.Title</div>
+                                                <div class="small text-muted-custom font-monospace">@doc.FileName</div>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="badge bg-warning bg-opacity-25 text-glow border border-warning border-opacity-15 font-monospace fs-6 px-3 py-1 text-warning">
+                                                    @doc.CitationCount lần
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- New Row: Token Over Time & Student Activity & Word Cloud -->
+    <div class="row g-4 mb-5">
+        <!-- Token Allocation Over Time (Line Chart) -->
+        <div class="col-lg-6">
+            <div class="card card-glass h-100">
+                <div class="card-header header-gradient py-3 px-4">
+                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-graph-up-arrow text-indigo-400"></i> Phân bổ Token theo thời gian (Prompt vs Completion)</h5>
+                </div>
+                <div class="card-body p-4 d-flex align-items-center justify-content-center">
+                    <div class="w-100" style="min-height: 250px; height: 250px;">
+                        <canvas id="tokenOverTimeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Activity by Hour (Bar Chart) -->
+        <div class="col-lg-3">
+            <div class="card card-glass h-100">
+                <div class="card-header header-gradient py-3 px-4">
+                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-clock-history text-pink-400"></i> Tần suất đặt câu hỏi (Khung giờ)</h5>
+                </div>
+                <div class="card-body p-4 d-flex align-items-center justify-content-center">
+                    <div class="w-100" style="min-height: 250px; height: 250px;">
+                        <canvas id="hourlyActivityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Word Frequency List -->
+        <div class="col-lg-3">
+            <div class="card card-glass h-100">
+                <div class="card-header header-gradient py-3 px-4">
+                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-bar-chart-steps text-warning"></i> Từ khóa hỏi nhiều nhất</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-glass align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Từ khóa</th>
+                                    <th class="text-end">Số lần</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    var wordCloud = ViewBag.WordCloud as List<PresentationLayer.Models.WordFrequencyViewModel> ?? new List<PresentationLayer.Models.WordFrequencyViewModel>();
+                                    if (wordCloud.Count == 0)
+                                    {
+                                        <tr><td colspan="2" class="text-center py-4 text-muted">Chưa có đủ từ khóa để hiển thị.</td></tr>
+                                    }
+                                    else
+                                    {
+                                        var maxCount = wordCloud.Max(w => w.Count);
+                                        foreach (var w in wordCloud)
+                                        {
+                                            string color = w.Count > maxCount * 0.7 ? "#818cf8" : (w.Count > maxCount * 0.4 ? "#f472b6" : "#fbbf24");
+                                            <tr>
+                                                <td class="fw-bold" style="color: @color;">@w.Word</td>
+                                                <td class="text-end">
+                                                    <span class="badge bg-opacity-25 border font-monospace px-3 py-1" style="color: @color; background-color: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08);">
+                                                        @w.Count lần
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Removed Details Table -->
 </div>
 
 @section Scripts {
@@ -103,126 +348,90 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-        // Prepare Data for Chart
-        const rawData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model));
-        
-        let chartInstance = null;
+        const tokenOverTimeData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.TokenOverTime));
+        const hourlyActivityData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.HourlyActivity));
 
-        function renderChart(data) {
-            const ctx = document.getElementById('metricsChart').getContext('2d');
-            
-            // Group data by Model Name (taking averages if multiple strategies exist)
-            const grouped = {};
-            data.forEach(item => {
-                let label = item.ModelName;
-                if(item.ChunkStrategy) label += " (" + item.ChunkStrategy + ")";
-                
-                if (!grouped[label]) {
-                    grouped[label] = { p: 0, r: 0, count: 0 };
-                }
-                grouped[label].p += item.Precision3;
-                grouped[label].r += item.Recall3;
-                grouped[label].count++;
-            });
-
-            const labels = Object.keys(grouped);
-            const precisionData = labels.map(l => grouped[l].p / grouped[l].count);
-            const recallData = labels.map(l => grouped[l].r / grouped[l].count);
-
-            if(chartInstance) {
-                chartInstance.destroy();
-            }
-
-            chartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Precision@3',
-                            data: precisionData,
-                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Recall@3',
-                            data: recallData,
-                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 1
-                        }
-                    ]
+        // Token Over Time Chart
+        const tokenOverTimeCtx = document.getElementById('tokenOverTimeChart').getContext('2d');
+        new Chart(tokenOverTimeCtx, {
+            type: 'line',
+            data: {
+                labels: tokenOverTimeData.map(d => d.DateStr),
+                datasets: [
+                    {
+                        label: 'Prompt Tokens (In)',
+                        data: tokenOverTimeData.map(d => d.PromptTokens),
+                        borderColor: '#818cf8',
+                        backgroundColor: 'rgba(129, 140, 248, 0.08)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Completion Tokens (Out)',
+                        data: tokenOverTimeData.map(d => d.CompletionTokens),
+                        borderColor: '#f472b6',
+                        backgroundColor: 'rgba(244, 114, 182, 0.08)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8' } }
                 },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 1.0
-                        }
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8' }
                     }
                 }
-            });
-        }
-
-        // Initialize Chart
-        renderChart(rawData);
-
-        // Filter Logic
-        document.getElementById('strategyFilter').addEventListener('change', function() {
-            const selected = this.value;
-            const rows = document.querySelectorAll('.data-row');
-            
-            const filteredData = [];
-            
-            rows.forEach(row => {
-                const strategy = row.getAttribute('data-strategy');
-                if (selected === "" || strategy === selected) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            if (selected === "") {
-                renderChart(rawData);
-            } else {
-                renderChart(rawData.filter(x => x.ChunkStrategy === selected));
             }
         });
 
-        // Export to CSV Logic
-        function exportTableToCSV(filename) {
-            const rows = document.querySelectorAll('#resultsTable tr');
-            let csv = [];
-            for (let i = 0; i < rows.length; i++) {
-                let row = [], cols = rows[i].querySelectorAll('td, th');
-                
-                // Only process visible rows
-                if (rows[i].style.display !== 'none') {
-                    for (let j = 0; j < cols.length; j++) {
-                        let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").trim();
-                        // Escape quotes
-                        data = data.replace(/"/g, '""');
-                        row.push('"' + data + '"');
+        // Hourly Activity Chart
+        const hours24 = Array.from({length: 24}, (_, i) => i);
+        const hourlyCounts = hours24.map(h => {
+            const match = hourlyActivityData.find(item => item.Hour === h);
+            return match ? match.Count : 0;
+        });
+
+        const hourlyCtx = document.getElementById('hourlyActivityChart').getContext('2d');
+        new Chart(hourlyCtx, {
+            type: 'bar',
+            data: {
+                labels: hours24.map(h => `${h}h`),
+                datasets: [{
+                    label: 'Số câu hỏi',
+                    data: hourlyCounts,
+                    backgroundColor: 'rgba(244, 114, 182, 0.7)',
+                    borderColor: 'rgba(244, 114, 182, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { size: 9 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8', font: { size: 9 } }
                     }
-                    csv.push(row.join(','));
                 }
             }
-            
-            downloadCSV(csv.join('\n'), filename);
-        }
-
-        function downloadCSV(csv, filename) {
-            let csvFile = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-            let downloadLink = document.createElement("a");
-            downloadLink.download = filename;
-            downloadLink.href = window.URL.createObjectURL(csvFile);
-            downloadLink.style.display = "none";
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-        }
+        });
     </script>
 }

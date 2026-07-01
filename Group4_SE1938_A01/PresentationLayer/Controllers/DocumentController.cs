@@ -12,6 +12,9 @@ using Microsoft.Extensions.Logging;
 using BusinessLayer.DTOs;
 using BusinessLayer.Interfaces;
 
+using Microsoft.AspNetCore.SignalR;
+using PresentationLayer.Hubs;
+
 namespace PresentationLayer.Controllers
 {
     [Authorize(Roles = "Teacher,Admin")]
@@ -20,12 +23,14 @@ namespace PresentationLayer.Controllers
         private readonly IDocumentService _documentService;
         private readonly IUserService _userService;
         private readonly ILogger<DocumentController> _logger;
+        private readonly IHubContext<NewsHub> _hubContext;
 
-        public DocumentController(IDocumentService documentService, IUserService userService, ILogger<DocumentController> logger)
+        public DocumentController(IDocumentService documentService, IUserService userService, ILogger<DocumentController> logger, IHubContext<NewsHub> hubContext)
         {
             _documentService = documentService;
             _userService = userService;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -68,11 +73,51 @@ namespace PresentationLayer.Controllers
             return View(subjects);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetSubjects()
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            IEnumerable<SubjectDto> subjects;
+            if (role == "Admin")
+            {
+                subjects = await _documentService.GetAllSubjectsAsync();
+            }
+            else // Teacher
+            {
+                int.TryParse(userIdString, out int userId);
+                var allSubjects = await _documentService.GetAllSubjectsAsync();
+                var assignedSubjects = new List<SubjectDto>();
+                foreach (var s in allSubjects)
+                {
+                    if (await _documentService.IsUserAssignedToSubjectAsync(userId, s.SubjectId))
+                    {
+                        assignedSubjects.Add(s);
+                    }
+                }
+                subjects = assignedSubjects;
+            }
+
+            return Json(subjects.Select(s => new {
+                s.SubjectId,
+                s.SubjectCode,
+                s.SubjectName,
+                s.ManagedByUserId,
+                s.ManagedByUserName,
+                s.AssignedTeacherIds,
+                s.DefaultModelId,
+                s.DefaultStrategyId,
+                s.DefaultChunkSize,
+                s.DefaultChunkOverlap
+            }));
+        }
+
         // --- Subject CRUD Actions ---
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateSubject(string subjectCode, string subjectName, int? managedByUserId, List<int> teacherIds)
+        public async Task<IActionResult> CreateSubject(string subjectCode, string subjectName, int? managedByUserId, List<int> teacherIds, int? defaultModelId, int? defaultStrategyId, int? defaultChunkSize, int? defaultChunkOverlap)
         {
             if (string.IsNullOrEmpty(subjectCode) || string.IsNullOrEmpty(subjectName))
             {
@@ -83,7 +128,11 @@ namespace PresentationLayer.Controllers
             var subject = new SubjectDto 
             { 
                 SubjectCode = subjectCode, 
-                SubjectName = subjectName
+                SubjectName = subjectName,
+                DefaultModelId = defaultModelId ?? 1,
+                DefaultStrategyId = defaultStrategyId ?? 2,
+                DefaultChunkSize = defaultChunkSize ?? 500,
+                DefaultChunkOverlap = defaultChunkOverlap ?? 100
             };
             var created = await _documentService.CreateSubjectAsync(subject);
             
@@ -96,12 +145,13 @@ namespace PresentationLayer.Controllers
             await _documentService.AssignTeachersToSubjectAsync(created.SubjectId, allIds, managedByUserId);
 
             TempData["Success"] = "Thêm môn học thành công!";
+            await _hubContext.Clients.All.SendAsync("ReceiveSubjectUpdate");
             return RedirectToAction("Index");
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditSubject(int subjectId, string subjectCode, string subjectName, int? managedByUserId, List<int> teacherIds)
+        public async Task<IActionResult> EditSubject(int subjectId, string subjectCode, string subjectName, int? managedByUserId, List<int> teacherIds, int? defaultModelId, int? defaultStrategyId, int? defaultChunkSize, int? defaultChunkOverlap)
         {
             if (string.IsNullOrEmpty(subjectCode) || string.IsNullOrEmpty(subjectName))
             {
@@ -113,7 +163,11 @@ namespace PresentationLayer.Controllers
             { 
                 SubjectId = subjectId, 
                 SubjectCode = subjectCode, 
-                SubjectName = subjectName
+                SubjectName = subjectName,
+                DefaultModelId = defaultModelId ?? 1,
+                DefaultStrategyId = defaultStrategyId ?? 2,
+                DefaultChunkSize = defaultChunkSize ?? 500,
+                DefaultChunkOverlap = defaultChunkOverlap ?? 100
             };
             await _documentService.UpdateSubjectAsync(subject);
 
@@ -126,6 +180,7 @@ namespace PresentationLayer.Controllers
             await _documentService.AssignTeachersToSubjectAsync(subjectId, allIds, managedByUserId);
 
             TempData["Success"] = "Cập nhật môn học thành công!";
+            await _hubContext.Clients.All.SendAsync("ReceiveSubjectUpdate");
             return RedirectToAction("Index");
         }
 
@@ -135,9 +190,9 @@ namespace PresentationLayer.Controllers
         {
             try
             {
-                // Delete Subject (EF will cascade delete chapters and documents if configured, or block)
                 await _documentService.DeleteSubjectAsync(subjectId);
                 TempData["Success"] = "Xóa môn học thành công!";
+                await _hubContext.Clients.All.SendAsync("ReceiveSubjectUpdate");
             }
             catch (Exception)
             {
@@ -218,6 +273,7 @@ namespace PresentationLayer.Controllers
 
             var chapter = new ChapterDto { SubjectId = subjectId, ChapterNumber = chapterNumber, ChapterName = chapterName };
             await _documentService.CreateChapterAsync(chapter);
+            await _hubContext.Clients.All.SendAsync("ReceiveChapterUpdate", subjectId);
             return Json(new { success = true, message = "Thêm chương mới thành công!" });
         }
 
@@ -242,6 +298,7 @@ namespace PresentationLayer.Controllers
             existing.ChapterNumber = chapterNumber;
             existing.ChapterName = chapterName;
             await _documentService.UpdateChapterAsync(existing);
+            await _hubContext.Clients.All.SendAsync("ReceiveChapterUpdate", existing.SubjectId);
             return Json(new { success = true, message = "Cập nhật chương thành công!" });
         }
 
@@ -257,7 +314,13 @@ namespace PresentationLayer.Controllers
 
             try
             {
+                var existing = await _documentService.GetChapterByIdAsync(chapterId);
+                int subjectId = existing?.SubjectId ?? 0;
                 await _documentService.DeleteChapterAsync(chapterId);
+                if (subjectId > 0)
+                {
+                    await _hubContext.Clients.All.SendAsync("ReceiveChapterUpdate", subjectId);
+                }
                 return Json(new { success = true, message = "Xóa chương thành công!" });
             }
             catch (Exception)
@@ -344,6 +407,22 @@ namespace PresentationLayer.Controllers
                 textContent = GenerateCurriculumSimulationText(title);
             }
 
+            // Check duplicate filename in chapter
+            try
+            {
+                var existingDocs = await _documentService.GetDocumentsByChapterIdAsync(chapterId);
+                var duplicate = existingDocs.FirstOrDefault(d => d.FileName.Equals(file.FileName, StringComparison.OrdinalIgnoreCase));
+                if (duplicate != null)
+                {
+                    _logger.LogInformation("Duplicate document detected: {FileName}. Deleting old document (Id={DocId}) first.", file.FileName, duplicate.DocumentId);
+                    await _documentService.DeleteDocumentAsync(duplicate.DocumentId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to check or delete duplicate document: {Message}", ex.Message);
+            }
+
             var doc = new DocumentDto
             {
                 ChapterId = chapterId,
@@ -357,8 +436,32 @@ namespace PresentationLayer.Controllers
 
             try
             {
-                await _documentService.UploadDocumentAsync(doc, textContent);
-                return Json(new { success = true, message = "Tải lên tài liệu thành công!" });
+                var uploaded = await _documentService.UploadDocumentAsync(doc, textContent);
+
+                // Auto index if default setting exists
+                var chapter = await _documentService.GetChapterByIdAsync(chapterId);
+                var subject = chapter != null ? await _documentService.GetSubjectByIdAsync(chapter.SubjectId) : null;
+                bool wasAutoIndexed = false;
+                if (subject != null && subject.DefaultModelId.HasValue && subject.DefaultStrategyId.HasValue)
+                {
+                    _logger.LogInformation("Auto-indexing uploaded document {DocId} with Model={ModelId}, Strategy={StrategyId}",
+                        uploaded.DocumentId, subject.DefaultModelId.Value, subject.DefaultStrategyId.Value);
+                    await _documentService.IndexDocumentAsync(
+                        uploaded.DocumentId,
+                        subject.DefaultModelId.Value,
+                        subject.DefaultStrategyId.Value,
+                        subject.DefaultChunkSize ?? 500,
+                        subject.DefaultChunkOverlap ?? 100
+                    );
+                    wasAutoIndexed = true;
+                }
+
+                await _hubContext.Clients.All.SendAsync("ReceiveDocumentUpdate", chapterId);
+                
+                string msg = wasAutoIndexed 
+                    ? "Tải lên và tự động lập chỉ mục tài liệu thành công!" 
+                    : "Tải lên tài liệu thành công!";
+                return Json(new { success = true, message = msg });
             }
             catch (Exception ex)
             {
@@ -475,7 +578,9 @@ namespace PresentationLayer.Controllers
 
             try
             {
+                int chapterId = document.ChapterId;
                 await _documentService.DeleteDocumentAsync(documentId);
+                await _hubContext.Clients.All.SendAsync("ReceiveDocumentUpdate", chapterId);
                 return Json(new { success = true, message = "Xóa tài liệu thành công!" });
             }
             catch (Exception)
@@ -488,11 +593,41 @@ namespace PresentationLayer.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> IndexDocument(int documentId, int modelId, int strategyId, int chunkSize, int chunkOverlap)
+        public async Task<IActionResult> IndexDocument(int documentId, int? modelId = null, int? strategyId = null, int? chunkSize = null, int? chunkOverlap = null)
         {
             try
             {
-                var index = await _documentService.IndexDocumentAsync(documentId, modelId, strategyId, chunkSize, chunkOverlap);
+                var doc = await _documentService.GetDocumentByIdAsync(documentId);
+                if (doc == null) return Json(new { success = false, message = "Tài liệu không tồn tại." });
+
+                var chapter = await _documentService.GetChapterByIdAsync(doc.ChapterId);
+                var subject = chapter != null ? await _documentService.GetSubjectByIdAsync(chapter.SubjectId) : null;
+
+                // Resolve defaults
+                int resolvedModelId = modelId ?? subject?.DefaultModelId ?? 1;
+                int resolvedStrategyId = strategyId ?? subject?.DefaultStrategyId ?? 2;
+                int resolvedChunkSize = chunkSize ?? subject?.DefaultChunkSize ?? 500;
+                int resolvedChunkOverlap = chunkOverlap ?? subject?.DefaultChunkOverlap ?? 100;
+
+                // Ensure selected model exists in db
+                var allModels = await _documentService.GetAllEmbeddingModelsAsync();
+                if (!allModels.Any(m => m.ModelId == resolvedModelId))
+                {
+                    resolvedModelId = allModels.FirstOrDefault()?.ModelId ?? 1;
+                }
+
+                // Ensure selected strategy exists in db
+                var allStrategies = await _documentService.GetAllChunkingStrategiesAsync();
+                if (!allStrategies.Any(s => s.StrategyId == resolvedStrategyId))
+                {
+                    resolvedStrategyId = allStrategies.FirstOrDefault()?.StrategyId ?? 1;
+                }
+
+                var index = await _documentService.IndexDocumentAsync(documentId, resolvedModelId, resolvedStrategyId, resolvedChunkSize, resolvedChunkOverlap);
+                if (doc != null)
+                {
+                    await _hubContext.Clients.All.SendAsync("ReceiveDocumentUpdate", doc.ChapterId);
+                }
                 return Json(new { success = true, message = "Lập chỉ mục RAG thành công!", indexId = index.IndexId });
             }
             catch (Exception ex)

@@ -61,7 +61,7 @@
                 <div class="list-group list-group-flush gap-2" id="subjectList">
                     @foreach (var sub in Model)
                     {
-                        <div class="session-item d-flex align-items-center justify-content-between subject-item" data-id="@sub.SubjectId" data-code="@sub.SubjectCode" data-name="@sub.SubjectName" data-managed-by="@(sub.ManagedByUserId?.ToString() ?? "")" data-assigned-teachers="@string.Join(",", sub.AssignedTeacherIds)" onclick="selectSubject(@sub.SubjectId, this)">
+                        <div class="session-item d-flex align-items-center justify-content-between subject-item" data-id="@sub.SubjectId" data-code="@sub.SubjectCode" data-name="@sub.SubjectName" data-managed-by="@(sub.ManagedByUserId?.ToString() ?? "")" data-assigned-teachers="@string.Join(",", sub.AssignedTeacherIds)" data-default-model="@sub.DefaultModelId" data-default-strategy="@sub.DefaultStrategyId" data-default-chunk-size="@sub.DefaultChunkSize" data-default-chunk-overlap="@sub.DefaultChunkOverlap" onclick="selectSubject(@sub.SubjectId, this)">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="bi bi-journal-code text-glow"></i>
                                 <div>
@@ -80,7 +80,7 @@
                             @if (User.IsInRole("Admin"))
                             {
                                 <div class="d-inline-flex gap-1 action-buttons">
-                                    <button class="btn btn-link text-glow p-1 btn-edit-sub" onclick="event.stopPropagation(); openEditSubjectModal(@sub.SubjectId, '@sub.SubjectCode', '@sub.SubjectName', '@sub.ManagedByUserId', '@string.Join(",", sub.AssignedTeacherIds)')">
+                                    <button class="btn btn-link text-glow p-1 btn-edit-sub" onclick="event.stopPropagation(); triggerEditSubject(this)">
                                         <i class="bi bi-pencil-square"></i>
                                     </button>
                                     <button class="btn btn-link text-danger p-1 btn-delete-sub" onclick="event.stopPropagation(); confirmDeleteSubject(@sub.SubjectId, '@sub.SubjectCode')">
@@ -218,6 +218,48 @@
                             </ul>
                         </div>
                     </div>
+                    <hr class="border-white border-opacity-10 my-3" />
+                    <h6 class="text-white mb-3 fw-bold"><i class="bi bi-gear-fill"></i> Cấu hình Index mặc định (Admin Only)</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted-custom">Embedding Model mặc định</label>
+                            <select name="defaultModelId" id="createSubDefaultModel" class="form-select form-glass">
+                                <option value="">-- Chọn Model --</option>
+                                @if (ViewBag.EmbeddingModels != null)
+                                {
+                                    foreach (var embModel in (IEnumerable<BusinessLayer.DTOs.EmbeddingModelDto>)ViewBag.EmbeddingModels)
+                                    {
+                                        <option value="@embModel.ModelId">@embModel.ModelName</option>
+                                    }
+                                }
+                            </select>
+                            <div id="createSubDefaultModelHelpText" class="mt-2 p-2 rounded small" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); font-size: 0.75rem; color: #a5b4fc; display: none;"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted-custom">Chiến lược Chunking mặc định</label>
+                            <select name="defaultStrategyId" id="createSubDefaultStrategy" class="form-select form-glass">
+                                <option value="">-- Chọn Chiến lược --</option>
+                                @if (ViewBag.Strategies != null)
+                                {
+                                    foreach (var strategy in (IEnumerable<BusinessLayer.DTOs.ChunkingStrategyDto>)ViewBag.Strategies)
+                                    {
+                                        <option value="@strategy.StrategyId">@strategy.StrategyName</option>
+                                    }
+                                }
+                            </select>
+                            <div id="createSubDefaultStrategyHelpText" class="mt-2 p-2 rounded small" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem; color: #a7f3d0; display: none;"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted-custom">Chunk Size mặc định</label>
+                            <input type="number" name="defaultChunkSize" class="form-control form-glass" value="500" min="100" max="2000" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted-custom">Chunk Overlap mặc định</label>
+                            <input type="number" name="defaultChunkOverlap" class="form-control form-glass" value="100" min="0" max="1000" />
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer modal-footer-glass">
                     <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
@@ -283,6 +325,48 @@
                                     }
                                 }
                             </ul>
+                        </div>
+                    </div>
+                    <hr class="border-white border-opacity-10 my-3" />
+                    <h6 class="text-white mb-3 fw-bold"><i class="bi bi-gear-fill"></i> Cấu hình Index mặc định (Admin Only)</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted-custom">Embedding Model mặc định</label>
+                            <select name="defaultModelId" id="editSubDefaultModel" class="form-select form-glass">
+                                <option value="">-- Chọn Model --</option>
+                                @if (ViewBag.EmbeddingModels != null)
+                                {
+                                    foreach (var embModel in (IEnumerable<BusinessLayer.DTOs.EmbeddingModelDto>)ViewBag.EmbeddingModels)
+                                    {
+                                        <option value="@embModel.ModelId">@embModel.ModelName</option>
+                                    }
+                                }
+                            </select>
+                            <div id="editSubDefaultModelHelpText" class="mt-2 p-2 rounded small" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); font-size: 0.75rem; color: #a5b4fc; display: none;"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted-custom">Chiến lược Chunking mặc định</label>
+                            <select name="defaultStrategyId" id="editSubDefaultStrategy" class="form-select form-glass">
+                                <option value="">-- Chọn Chiến lược --</option>
+                                @if (ViewBag.Strategies != null)
+                                {
+                                    foreach (var strategy in (IEnumerable<BusinessLayer.DTOs.ChunkingStrategyDto>)ViewBag.Strategies)
+                                    {
+                                        <option value="@strategy.StrategyId">@strategy.StrategyName</option>
+                                    }
+                                }
+                            </select>
+                            <div id="editSubDefaultStrategyHelpText" class="mt-2 p-2 rounded small" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem; color: #a7f3d0; display: none;"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted-custom">Chunk Size mặc định</label>
+                            <input type="number" name="defaultChunkSize" id="editSubDefaultChunkSize" class="form-control form-glass" min="100" max="2000" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted-custom">Chunk Overlap mặc định</label>
+                            <input type="number" name="defaultChunkOverlap" id="editSubDefaultChunkOverlap" class="form-control form-glass" min="0" max="1000" />
                         </div>
                     </div>
                 </div>
@@ -362,60 +446,6 @@
     </div>
 </div>
 
-<!-- RAG Chunking Index Modal (Parameters setup in popup) -->
-<div class="modal fade" id="indexDocModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modal-content-glass">
-            <div class="modal-header modal-header-glass">
-                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-cpu-fill"></i> Thiết lập phân mảnh & lập chỉ mục</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="indexDocForm" onsubmit="runIndexDoc(event)">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="documentId" id="indexDocId" />
-                <div class="modal-body p-4 col-12">
-                    <div class="mb-3">
-                        <label class="form-label text-muted-custom">Mô hình nhúng (Embedding Model)</label>
-                        <select name="modelId" id="indexModelSelect" class="form-select form-glass" required>
-                            @foreach (var m in models)
-                            {
-                                <option value="@m.ModelId">@m.ModelName (@m.Provider)</option>
-                            }
-                        </select>
-                        <div id="modelHelpText" class="mt-2 p-2 rounded small" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); font-size: 0.75rem; color: #a5b4fc; display: none;"></div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted-custom">Chiến lược phân nhỏ (Chunk Strategy)</label>
-                        <select name="strategyId" id="indexStrategySelect" class="form-select form-glass" required>
-                            @foreach (var s in strategies)
-                            {
-                                <option value="@s.StrategyId">@s.StrategyName</option>
-                            }
-                        </select>
-                        <div id="strategyHelpText" class="mt-2 p-2 rounded small" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.75rem; color: #a7f3d0; display: none;"></div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <label class="form-label text-muted-custom">Kích thước (Chunk Size)</label>
-                            <input type="number" name="chunkSize" class="form-control form-glass" value="500" min="100" max="2000" required />
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted-custom">Chồng lặp (Chunk Overlap)</label>
-                            <input type="number" name="chunkOverlap" class="form-control form-glass" value="100" min="0" max="500" required />
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer modal-footer-glass">
-                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-glow-primary d-flex align-items-center gap-2" id="btnStartIndex">
-                        <i class="bi bi-play-circle-fill"></i> Bắt đầu xử lý
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <!-- Indexes List and Chunks Previews Modal -->
 <div class="modal fade" id="viewChunksModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -450,6 +480,7 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script>
         var selectedSubjectId = 0;
         var selectedChapterId = 0;
@@ -546,11 +577,33 @@
             }
         }
 
-        function openEditSubjectModal(id, code, name, teacherId, assignedTeacherIds) {
+        function triggerEditSubject(btn) {
+            var item = $(btn).closest(".subject-item");
+            var id = item.attr("data-id");
+            var code = item.attr("data-code");
+            var name = item.attr("data-name");
+            var teacherId = item.attr("data-managed-by");
+            var assignedTeacherIds = item.attr("data-assigned-teachers");
+            var defaultModelId = item.attr("data-default-model");
+            var defaultStrategyId = item.attr("data-default-strategy");
+            var defaultChunkSize = item.attr("data-default-chunk-size");
+            var defaultChunkOverlap = item.attr("data-default-chunk-overlap");
+
+            openEditSubjectModal(id, code, name, teacherId, assignedTeacherIds, defaultModelId, defaultStrategyId, defaultChunkSize, defaultChunkOverlap);
+        }
+
+        function openEditSubjectModal(id, code, name, teacherId, assignedTeacherIds, defaultModelId, defaultStrategyId, defaultChunkSize, defaultChunkOverlap) {
             $("#editSubId").val(id);
             $("#editSubCode").val(code);
             $("#editSubName").val(name);
             $("#editSubTeacher").val(teacherId || "");
+            $("#editSubDefaultModel").val(defaultModelId || "");
+            $("#editSubDefaultStrategy").val(defaultStrategyId || "");
+            $("#editSubDefaultChunkSize").val(defaultChunkSize || "500");
+            $("#editSubDefaultChunkOverlap").val(defaultChunkOverlap || "100");
+
+            // Update description cards based on loaded values
+            updateAdminHelpTexts("editSubDefault");
 
             // Uncheck all edit checkboxes first
             $(".edit-teacher-checkbox").prop("checked", false);
@@ -734,7 +787,7 @@
                     var docActionBtns = "";
                     if (isManager) {
                         docActionBtns = `
-                            <button class="btn btn-sm btn-outline-glass py-1 px-2 d-flex align-items-center gap-1" onclick="openIndexModal(${doc.documentId})" style="font-size:0.75rem;">
+                            <button class="btn btn-sm btn-outline-glass py-1 px-2 d-flex align-items-center gap-1" onclick="runIndexDocDirectly(${doc.documentId})" style="font-size:0.75rem;">
                                 <i class="bi bi-cpu-fill text-glow"></i> Index
                             </button>
                             <button class="btn btn-sm btn-logout py-1 px-2 d-flex align-items-center gap-1" onclick="confirmDeleteDoc(${doc.documentId})" style="font-size:0.75rem;">
@@ -881,26 +934,19 @@
         }
 
         // --- 4. RAG Indexing & Previews (AJAX) ---
-        function openIndexModal(id) {
-            $("#indexDocId").val(id);
-            var modal = new bootstrap.Modal(document.getElementById('indexDocModal'));
-            modal.show();
-        }
-
-        function runIndexDoc(e) {
-            e.preventDefault();
-            bootstrap.Modal.getInstance(document.getElementById('indexDocModal')).hide();
-            
+        function runIndexDocDirectly(id) {
             Swal.fire({
                 title: 'Đang tiến hành lập chỉ mục RAG...',
-                html: 'Tiến hành phân nhỏ văn bản và nhúng vector vào kho lưu trữ...',
+                html: 'Đang phân nhỏ văn bản và nhúng vector theo cấu hình mặc định của môn học...',
                 allowOutsideClick: false,
                 didOpen: () => { Swal.showLoading(); }
             });
 
-            var formData = $("#indexDocForm").serialize();
-
-            $.post("/Document/IndexDocument", formData, function (res) {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            $.post("/Document/IndexDocument", {
+                documentId: id,
+                __RequestVerificationToken: token
+            }, function (res) {
                 Swal.close();
                 if (res.success) {
                     Swal.fire({
@@ -988,32 +1034,265 @@
             "3": "🌟 <b>Sentence (Theo câu văn):</b> Tách theo dấu chấm câu. Phù hợp nhất cho bộ câu hỏi ôn tập (Q&A) hoặc tài liệu tóm tắt ngắn gọn."
         };
 
-        function updateHelpTexts() {
-            const selectedModelId = $("#indexModelSelect").val();
-            const selectedStrategyId = $("#indexStrategySelect").val();
+        function updateAdminHelpTexts(prefix) {
+            const selectedModelId = $("#" + prefix + "Model").val();
+            const selectedStrategyId = $("#" + prefix + "Strategy").val();
 
+            const modelHelp = $("#" + prefix + "ModelHelpText");
             if (modelNotes[selectedModelId]) {
-                $("#modelHelpText").html(modelNotes[selectedModelId]).fadeIn(150);
+                modelHelp.html(modelNotes[selectedModelId]).fadeIn(150);
             } else {
-                $("#modelHelpText").hide();
+                modelHelp.hide();
             }
 
+            const strategyHelp = $("#" + prefix + "StrategyHelpText");
             if (strategyNotes[selectedStrategyId]) {
-                $("#strategyHelpText").html(strategyNotes[selectedStrategyId]).fadeIn(150);
+                strategyHelp.html(strategyNotes[selectedStrategyId]).fadeIn(150);
             } else {
-                $("#strategyHelpText").hide();
+                strategyHelp.hide();
             }
         }
 
         // Attach listeners and initialize when modal is shown
         $(document).ready(function() {
-            $("#indexModelSelect").on("change", updateHelpTexts);
-            $("#indexStrategySelect").on("change", updateHelpTexts);
+            // Listeners for Admin Default Index setup (Create Subject Modal)
+            $("#createSubDefaultModel").on("change", function() { updateAdminHelpTexts("createSubDefault"); });
+            $("#createSubDefaultStrategy").on("change", function() { updateAdminHelpTexts("createSubDefault"); });
+            
+            // Listeners for Admin Default Index setup (Edit Subject Modal)
+            $("#editSubDefaultModel").on("change", function() { updateAdminHelpTexts("editSubDefault"); });
+            $("#editSubDefaultStrategy").on("change", function() { updateAdminHelpTexts("editSubDefault"); });
+            
+            // Trigger when modals are shown to set initial description
+            $('#createSubjectModal').on('shown.bs.modal', function () { updateAdminHelpTexts("createSubDefault"); });
+            $('#editSubjectModal').on('shown.bs.modal', function () { updateAdminHelpTexts("editSubDefault"); });
 
-            // Trigger when modal is open
-            $('#indexDocModal').on('shown.bs.modal', function () {
-                updateHelpTexts();
+            // SignalR Connection
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/newsHub")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("ReceiveSubjectUpdate", function () {
+                reloadSubjects();
             });
+
+            connection.on("ReceiveChapterUpdate", function (subjectId) {
+                if (selectedSubjectId == subjectId) {
+                    reloadChapters();
+                }
+            });
+
+            connection.on("ReceiveDocumentUpdate", function (chapterId) {
+                if (selectedChapterId == chapterId) {
+                    reloadDocuments();
+                }
+            });
+
+            connection.start().catch(err => console.error("SignalR Connection Error: ", err));
         });
+
+        function reloadChapters() {
+            if (!selectedSubjectId) return;
+            var activeId = $(".chapter-item.active").data("id");
+            $.get("/Document/GetChapters?subjectId=" + selectedSubjectId, function (data) {
+                $("#chapterPlaceholder").addClass("d-none");
+                $("#chapterList").removeClass("d-none");
+
+                if (data.length === 0) {
+                    $("#chapterList").html('<div class="text-center text-muted-custom py-4">Môn học này chưa có chương học nào.</div>');
+                    selectedChapterId = 0;
+                    $("#docPlaceholder").removeClass("d-none").html('<i class="bi bi-file-earmark-zip fs-1 mb-2 d-block"></i>Vui lòng chọn chương học ở cột giữa');
+                    $("#documentList").addClass("d-none").empty();
+                    $("#btnUploadDoc").addClass("d-none");
+                    return;
+                }
+
+                var html = "";
+                data.forEach(function (chap) {
+                    var isActive = (chap.chapterId === activeId) ? "active" : "";
+                    var actionBtns = "";
+                    if (isManager) {
+                        actionBtns = `
+                            <div class="d-inline-flex gap-1 action-buttons">
+                                <button class="btn btn-link text-glow p-1" onclick="event.stopPropagation(); openEditChapterModal(${chap.chapterId}, ${chap.chapterNumber}, '${chap.chapterName}')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-link text-danger p-1" onclick="event.stopPropagation(); confirmDeleteChapter(${chap.chapterId})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                    }
+                    html += `
+                        <div class="session-item d-flex align-items-center justify-content-between chapter-item ${isActive}" data-id="${chap.chapterId}" onclick="selectChapter(${chap.chapterId}, this)">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary bg-opacity-25 text-glow border border-white border-opacity-10 px-2">Chương ${chap.chapterNumber}</span>
+                                <span class="fw-bold text-white">${chap.chapterName}</span>
+                            </div>
+                            ${actionBtns}
+                        </div>
+                    `;
+                });
+                $("#chapterList").html(html);
+
+                if (activeId) {
+                    var exists = data.some(function(c) { return c.chapterId === activeId; });
+                    if (!exists) {
+                        selectedChapterId = 0;
+                        $("#docPlaceholder").removeClass("d-none").html('<i class="bi bi-file-earmark-zip fs-1 mb-2 d-block"></i>Vui lòng chọn chương học ở cột giữa');
+                        $("#documentList").addClass("d-none").empty();
+                        $("#btnUploadDoc").addClass("d-none");
+                    } else {
+                        $(".chapter-item[data-id='" + activeId + "']").addClass("active");
+                    }
+                }
+            });
+        }
+
+        function reloadSubjects() {
+            var activeId = $(".subject-item.active").data("id");
+            $.get("/Document/GetSubjects", function (data) {
+                var html = "";
+                var isAdmin = currentUserRole === "Admin";
+                data.forEach(function (sub) {
+                    var isActive = (sub.subjectId === activeId) ? "active" : "";
+                    var assignedIds = (sub.assignedTeacherIds || []).join(",");
+                    var headHtml = sub.managedByUserName 
+                        ? `<div class="small text-glow" style="font-size: 0.75rem; color: #818cf8;"><i class="bi bi-person-badge"></i> Trưởng môn: ${sub.managedByUserName}</div>`
+                        : `<div class="small text-warning" style="font-size: 0.75rem;"><i class="bi bi-person-badge-fill"></i> Chưa gán Trưởng môn</div>`;
+                    
+                    var actionBtns = "";
+                    if (isAdmin) {
+                        actionBtns = `
+                            <div class="d-inline-flex gap-1 action-buttons">
+                                <button class="btn btn-link text-glow p-1 btn-edit-sub" onclick="event.stopPropagation(); triggerEditSubject(this)">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-link text-danger p-1 btn-delete-sub" onclick="event.stopPropagation(); confirmDeleteSubject(${sub.subjectId}, '${sub.subjectCode}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                    }
+                    html += `
+                        <div class="session-item d-flex align-items-center justify-content-between subject-item ${isActive}" data-id="${sub.subjectId}" data-code="${sub.subjectCode}" data-name="${sub.subjectName}" data-managed-by="${sub.managedByUserId || ''}" data-assigned-teachers="${assignedIds}" data-default-model="${sub.defaultModelId || ''}" data-default-strategy="${sub.defaultStrategyId || ''}" data-default-chunk-size="${sub.defaultChunkSize || ''}" data-default-chunk-overlap="${sub.defaultChunkOverlap || ''}" onclick="selectSubject(${sub.subjectId}, this)">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-journal-code text-glow"></i>
+                                <div>
+                                    <span class="fw-bold text-white">${sub.subjectCode}</span>
+                                    <div class="small text-muted-custom">${sub.subjectName}</div>
+                                    ${headHtml}
+                                </div>
+                            </div>
+                            ${actionBtns}
+                        </div>
+                    `;
+                });
+                $("#subjectList").html(html);
+
+                if (activeId) {
+                    var exists = data.some(function(s) { return s.subjectId === activeId; });
+                    if (!exists) {
+                        selectedSubjectId = 0;
+                        selectedChapterId = 0;
+                        $("#chapterPlaceholder").removeClass("d-none").html('<i class="bi bi-journals fs-1 mb-2 d-block"></i>Vui lòng chọn môn học ở cột trái');
+                        $("#chapterList").addClass("d-none").empty();
+                        $("#docPlaceholder").removeClass("d-none").html('<i class="bi bi-file-earmark-zip fs-1 mb-2 d-block"></i>Vui lòng chọn chương học ở cột giữa');
+                        $("#documentList").addClass("d-none").empty();
+                        $("#btnUploadDoc").addClass("d-none");
+                        $("#btnReIndexAll").addClass("d-none");
+                        $("#btnAddChapter").addClass("d-none");
+                    } else {
+                        var activeElem = $(".subject-item[data-id='" + activeId + "']");
+                        var managedBy = activeElem.data("managed-by");
+                        isManager = (currentUserRole === "Teacher" && Number(managedBy) === currentUserId);
+                        
+                        if (!isManager) {
+                            $("#btnAddChapter").addClass("d-none");
+                            $("#btnReIndexAll").addClass("d-none");
+                            $("#btnUploadDoc").addClass("d-none");
+                        } else {
+                            $("#btnReIndexAll").removeClass("d-none");
+                            $("#btnAddChapter").removeClass("d-none");
+                        }
+                    }
+                }
+            });
+        }
+
+        function reloadDocuments() {
+            if (!selectedChapterId) return;
+            $.get("/Document/GetDocuments?chapterId=" + selectedChapterId, function (data) {
+                $("#docPlaceholder").addClass("d-none");
+                $("#documentList").removeClass("d-none");
+
+                if (data.length === 0) {
+                    $("#documentList").html('<div class="text-center text-muted-custom py-4">Chương học này chưa có tài liệu nào.</div>');
+                    return;
+                }
+
+                var html = "";
+                data.forEach(function (doc) {
+                    var badgeColor = "bg-warning";
+                    if (doc.status === "Indexed") badgeColor = "bg-success";
+                    if (doc.status === "Failed") badgeColor = "bg-danger";
+                    if (doc.status === "Processing") badgeColor = "bg-info";
+
+                    var embedBadge = `<span class="badge bg-danger bg-opacity-25 border border-white border-opacity-10">❌ Chưa Index</span>`;
+                    if (doc.status === "Indexed") {
+                        if (doc.embeddingStatus === "VectorReady")
+                            embedBadge = `<span class="badge bg-success bg-opacity-25 border border-white border-opacity-10">✅ Vector Ready</span>`;
+                        else if (doc.embeddingStatus === "NeedsReIndex")
+                            embedBadge = `<span class="badge bg-warning bg-opacity-25 border border-white border-opacity-10">⚠️ Cần Re-Index</span>`;
+                        else
+                            embedBadge = `<span class="badge bg-danger bg-opacity-25 border border-white border-opacity-10">⚠️ Chưa có vector</span>`;
+                    }
+
+                    var docActionBtns = "";
+                    if (isManager) {
+                        docActionBtns = `
+                            <button class="btn btn-sm btn-outline-glass py-1 px-2 d-flex align-items-center gap-1" onclick="runIndexDocDirectly(${doc.documentId})" style="font-size:0.75rem;">
+                                <i class="bi bi-cpu-fill text-glow"></i> Index
+                            </button>
+                            <button class="btn btn-sm btn-logout py-1 px-2 d-flex align-items-center gap-1" onclick="confirmDeleteDoc(${doc.documentId})" style="font-size:0.75rem;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        `;
+                    }
+
+                    html += `
+                        <div class="card-glass p-3 mb-2" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-file-earmark-code fs-4 text-glow"></i>
+                                    <div>
+                                        <h6 class="text-white mb-1">${doc.title}</h6>
+                                        <div class="text-muted-custom" style="font-size:0.75rem;">
+                                            <span>${doc.fileName} (${(doc.fileSize / 1024).toFixed(1)} KB)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-1">
+                                    ${docActionBtns}
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-white border-opacity-5">
+                                <div class="d-flex gap-2">
+                                    <span class="badge ${badgeColor} bg-opacity-25 border border-white border-opacity-10">${doc.status}</span>
+                                    ${embedBadge}
+                                </div>
+                                <div class="d-flex align-items-center gap-1 text-muted-custom" style="font-size:0.75rem;">
+                                    <button class="btn btn-link text-glow p-0" onclick="openViewChunksModal(${doc.documentId})" style="font-size:0.75rem; text-decoration:none;">
+                                        <i class="bi bi-eye"></i> Xem Chunks
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                $("#documentList").html(html);
+            });
+        }
     </script>
 }

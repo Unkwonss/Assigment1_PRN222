@@ -23,26 +23,19 @@
             </select>
         </div>
 
-        <!-- Document Management Section (Upload + List) -->
-        <div id="documentSection" class="d-none mb-2">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="small fw-bold text-muted-custom" style="text-transform:uppercase;letter-spacing:.05em;"><i class="bi bi-files"></i> Tài liệu học tập</span>
-                <button class="btn btn-sm btn-outline-glass py-0 px-2" style="font-size:.72rem;" onclick="openUploadModal()">
-                    <i class="bi bi-upload"></i> Upload
-                </button>
-            </div>
-            <div id="documentList" style="max-height:160px;overflow-y:auto;">
-                <div class="text-center text-muted-custom py-2 small" id="docListPlaceholder">
-                    <i class="bi bi-file-earmark-x"></i> Chưa có tài liệu nào
-                </div>
-            </div>
-        </div>
-
         <div class="border-top border-white border-opacity-10 my-2 d-none" id="sessionDivider"></div>
 
         <button class="btn btn-glow-primary w-100 py-2 d-flex align-items-center justify-content-center gap-2 mb-3 d-none" id="btnNewChat" onclick="createNewChatSession()">
             <i class="bi bi-chat-left-plus-fill"></i> Cuộc trò chuyện mới
         </button>
+
+        <!-- Search Session Input -->
+        <div class="mb-3 d-none" id="sessionSearchContainer">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-dark bg-opacity-25 border-white border-opacity-10 text-muted-custom" style="border-right: none; background: rgba(15, 23, 42, 0.45);"><i class="bi bi-search"></i></span>
+                <input type="text" id="sessionSearchInput" class="form-control form-glass" placeholder="Tìm lịch sử hội thoại..." style="border-left: none; font-size: 0.8rem; background: rgba(15, 23, 42, 0.45); color: #fff;" onkeyup="filterSessions()" />
+            </div>
+        </div>
 
         <!-- Sessions Scrollable Container -->
         <div class="flex-grow-1 overflow-auto pe-1" id="sessionListContainer">
@@ -104,10 +97,19 @@
     <!-- 2. CENTER PANEL: MAIN CHAT SPACE -->
     <div class="chat-main h-100 card-glass p-0">
         <!-- Chat Header -->
-        <div class="chat-header">
-            <div>
-                <h5 class="fw-bold text-glow mb-0" id="activeSessionTitle">Vui lòng chọn hoặc tạo cuộc trò chuyện mới</h5>
-                <span class="small text-muted-custom" id="activeSubjectCode">VietRAG Assistant</span>
+        <div class="chat-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <div>
+                    <h5 class="fw-bold text-glow mb-0" id="activeSessionTitle">Vui lòng chọn hoặc tạo cuộc trò chuyện mới</h5>
+                    <span class="small text-muted-custom" id="activeSubjectCode">VietRAG Assistant</span>
+                </div>
+                <!-- Chat Search Input inside Header -->
+                <div class="d-none ms-3" id="chatSearchContainer" style="width: 220px;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-dark bg-opacity-25 border-white border-opacity-10 text-muted-custom" style="border-right: none; background: rgba(15, 23, 42, 0.45);"><i class="bi bi-search"></i></span>
+                        <input type="text" id="chatSearchInput" class="form-control form-glass" placeholder="Tìm trong tin nhắn..." style="border-left: none; font-size: 0.75rem; background: rgba(15, 23, 42, 0.45); color: #fff;" onkeyup="filterMessages()" />
+                    </div>
+                </div>
             </div>
             
             <div class="d-inline-flex gap-2 d-none" id="sessionHeaderActions">
@@ -188,253 +190,17 @@
     </div>
 </div>
 
-<!-- Upload Document Modal -->
-<div class="modal fade" id="uploadDocModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modal-content-glass">
-            <div class="modal-header modal-header-glass">
-                <h5 class="modal-title card-title-gradient mb-0"><i class="bi bi-cloud-upload-fill"></i> Upload Tài Liệu Học Tập</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" id="uploadModalCloseBtn"></button>
-            </div>
-
-            <!-- Upload Form -->
-            <div id="uploadFormSection">
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label text-muted-custom">Tiêu đề tài liệu <span class="text-danger">*</span></label>
-                        <input type="text" id="uploadTitle" class="form-control form-glass" placeholder="VD: Bài giảng Chương 3 - MVC Pattern" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted-custom">Chọn file <span class="text-danger">*</span></label>
-                        <input type="file" id="uploadFile" class="form-control form-glass" accept=".pdf,.docx,.pptx,.txt" />
-                        <div class="form-text text-muted-custom" style="font-size:.75rem;">Chấp nhận: PDF, DOCX, PPTX, TXT — Tối đa 15MB</div>
-                    </div>
-                    <div id="uploadFormError" class="alert alert-danger d-none py-2" style="font-size:.8rem;"></div>
-                </div>
-                <div class="modal-footer modal-footer-glass">
-                    <button type="button" class="btn btn-outline-glass" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-glow-primary" onclick="startUpload()" id="btnStartUpload">
-                        <i class="bi bi-upload"></i> Tải lên & Lập chỉ mục
-                    </button>
-                </div>
-            </div>
-
-            <!-- Upload Progress Section -->
-            <div id="uploadProgressSection" class="d-none">
-                <div class="modal-body p-4">
-                    <p class="text-muted-custom small mb-3">Đang xử lý tài liệu, vui lòng chờ...</p>
-                    <div class="d-flex flex-column gap-2" id="uploadStepsList">
-                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep1">
-                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
-                            <span class="step-text small">Xác thực tệp (Validate)</span>
-                        </div>
-                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep2">
-                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
-                            <span class="step-text small">Trích xuất văn bản (Extract Text)</span>
-                        </div>
-                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep3">
-                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
-                            <span class="step-text small">Phân nhỏ văn bản (Chunking)</span>
-                        </div>
-                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep4">
-                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
-                            <span class="step-text small">Tạo vector embedding</span>
-                        </div>
-                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep5">
-                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
-                            <span class="step-text small">Lưu vào Vector Store &amp; Index</span>
-                        </div>
-                        <div class="upload-step d-flex align-items-center gap-3 p-2 rounded" id="ustep6">
-                            <span class="step-icon"><i class="bi bi-hourglass"></i></span>
-                            <span class="step-text small">Cập nhật danh sách tài liệu</span>
-                        </div>
-                    </div>
-                    <div id="uploadResultMsg" class="mt-3 d-none"></div>
-                </div>
-                <div class="modal-footer modal-footer-glass" id="uploadProgressFooter">
-                    <button type="button" class="btn btn-outline-glass d-none" id="btnUploadAnother" onclick="resetUploadModal()">Upload thêm</button>
-                    <button type="button" class="btn btn-glow-primary d-none" id="btnUploadDone" data-bs-dismiss="modal">Hoàn thành</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Removed uploadDocModal -->
 
 @section Scripts {
-<style>
-.upload-step { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); transition: all .3s; }
-.upload-step.step-active { background: rgba(99,102,241,.15); border-color: rgba(99,102,241,.4); }
-.upload-step.step-done { background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.35); }
-.upload-step.step-error { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.35); }
-.upload-step .step-icon { font-size: 1.1rem; width: 24px; text-align: center; }
-.upload-step.step-active .step-icon { color: #818cf8; }
-.upload-step.step-done .step-icon { color: #10b981; }
-.upload-step.step-error .step-icon { color: #ef4444; }
-.doc-item { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); margin-bottom:4px; font-size:.75rem; cursor:default; }
-.doc-item:hover { background:rgba(255,255,255,.07); }
-.doc-item .doc-icon { font-size:1rem; }
-.doc-item.pdf .doc-icon { color:#f87171; }
-.doc-item.docx .doc-icon { color:#60a5fa; }
-.doc-item.pptx .doc-icon { color:#fb923c; }
-.doc-item.txt .doc-icon { color:#a3e635; }
-.doc-badge { font-size:.6rem; padding:1px 5px; border-radius:20px; background:rgba(16,185,129,.2); color:#34d399; border:1px solid rgba(16,185,129,.3); }
 </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script>
         var activeSessionId = null;
         var activeCitations = {};
         var lastSentMessage = null;
 
-        // --- Load Documents for Subject (sidebar) ---
-        function loadDocumentsForSubject(subjectId) {
-            if (!subjectId) { $('#documentList').html('<div class="text-center text-muted-custom py-2 small" id="docListPlaceholder"><i class="bi bi-file-earmark-x"></i> Chưa có tài liệu nào</div>'); return; }
-            $.get('/Chat/GetDocumentsBySubject?subjectId=' + subjectId, function(docs) {
-                if (!docs || docs.length === 0) {
-                    $('#documentList').html('<div class="text-center text-muted-custom py-2 small"><i class="bi bi-file-earmark-x"></i> Chưa có tài liệu nào. Hãy Upload!</div>');
-                    return;
-                }
-                var icons = { 'PDF':'bi-file-earmark-pdf', 'DOCX':'bi-file-earmark-word', 'PPTX':'bi-file-earmark-slides', 'TXT':'bi-file-earmark-text' };
-                var html = '';
-                docs.forEach(function(d) {
-                    var ft = (d.fileType||'TXT').toUpperCase();
-                    var ic = icons[ft] || 'bi-file-earmark';
-                    var cls = ft.toLowerCase();
-                    var badge = d.isIndexed ? '<span class="doc-badge ms-auto">Indexed</span>' : '<span class="doc-badge ms-auto" style="background:rgba(251,146,60,.2);color:#fb923c;border-color:rgba(251,146,60,.3);">Pending</span>';
-                    html += `<div class="doc-item ${cls}" title="${d.fileName}"><i class="bi ${ic} doc-icon"></i><span class="text-truncate flex-grow-1">${d.title}</span>${badge}</div>`;
-                });
-                $('#documentList').html(html);
-            });
-        }
-
-        // --- 1. Load Sessions + Documents ---
-        function loadSessionsForSubject() {
-            var subId = $("#subjectSelect").val();
-            if (!subId) {
-                $("#btnNewChat").addClass("d-none");
-                $("#ragSettingsPanel").addClass("d-none");
-                $("#documentSection").addClass("d-none");
-                $("#sessionDivider").addClass("d-none");
-                $("#sessionLabel").addClass("d-none");
-                $("#sessionList").empty();
-                $("#sessionPlaceholder").removeClass("d-none");
-                resetChatSpace();
-                return;
-            }
-            $("#sessionPlaceholder").addClass("d-none");
-            $("#btnNewChat").removeClass("d-none");
-            $("#ragSettingsPanel").removeClass("d-none");
-            $("#documentSection").removeClass("d-none");
-            $("#sessionDivider").removeClass("d-none");
-            $("#sessionLabel").removeClass("d-none");
-            loadDocumentsForSubject(subId);
-            $("#sessionList").html('<div class="text-center text-muted-custom py-3"><div class="spinner-border text-glow spinner-border-sm"></div></div>');
-            $.get("/Chat/GetSessions?subjectId=" + subId, function (data) {
-                if (data.length === 0) { $("#sessionList").html('<div class="text-center text-muted-custom py-3 small">Chưa có hội thoại nào. Tạo mới bên trên!</div>'); return; }
-                var html = "";
-                data.forEach(function (s) {
-                    var isActive = (s.sessionId === activeSessionId) ? "active" : "";
-                    html += `<div class="session-item ${isActive}" data-id="${s.sessionId}" onclick="selectSession('${s.sessionId}', this)"><div class="d-flex align-items-center gap-2 overflow-hidden text-nowrap"><i class="bi bi-chat-left-text text-glow"></i><span class="fw-bold small session-text text-truncate">${s.title}</span></div><span class="small text-muted-custom" style="font-size:0.65rem;">${s.lastUpdatedAt}</span></div>`;
-                });
-                $("#sessionList").html(html);
-            });
-        }
-
-        // --- Upload Modal ---
-        function openUploadModal() {
-            var subId = $('#subjectSelect').val();
-            if (!subId) { Swal.fire({icon:'warning',title:'Chọn môn học',text:'Vui lòng chọn môn học trước khi upload.',background:'rgba(13,17,28,.95)',color:'#fff'}); return; }
-            resetUploadModal();
-            new bootstrap.Modal(document.getElementById('uploadDocModal')).show();
-        }
-
-        function resetUploadModal() {
-            $('#uploadFormSection').removeClass('d-none');
-            $('#uploadProgressSection').addClass('d-none');
-            $('#uploadTitle').val('');
-            $('#uploadFile').val('');
-            $('#uploadFormError').addClass('d-none').text('');
-            $('#btnStartUpload').prop('disabled', false);
-            ['ustep1','ustep2','ustep3','ustep4','ustep5','ustep6'].forEach(function(id) { setStep(id,'wait'); });
-            $('#uploadResultMsg').addClass('d-none').html('');
-            $('#btnUploadAnother').addClass('d-none');
-            $('#btnUploadDone').addClass('d-none');
-        }
-
-        function setStep(id, state) {
-            var el = $('#' + id);
-            el.removeClass('step-active step-done step-error');
-            var icon = el.find('.step-icon');
-            if (state === 'active') { el.addClass('step-active'); icon.html('<div class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px;"></div>'); }
-            else if (state === 'done')  { el.addClass('step-done');  icon.html('<i class="bi bi-check-circle-fill"></i>'); }
-            else if (state === 'error') { el.addClass('step-error'); icon.html('<i class="bi bi-x-circle-fill"></i>'); }
-            else                        { icon.html('<i class="bi bi-hourglass"></i>'); }
-        }
-
-        async function startUpload() {
-            var title   = $('#uploadTitle').val().trim();
-            var file    = $('#uploadFile')[0].files[0];
-            var subId   = $('#subjectSelect').val();
-            var token   = $('input[name="__RequestVerificationToken"]').val();
-
-            if (!title || !file) { $('#uploadFormError').removeClass('d-none').text('Vui lòng nhập tiêu đề và chọn file.'); return; }
-
-            $('#uploadModalCloseBtn').prop('disabled', true);
-            $('#uploadFormSection').addClass('d-none');
-            $('#uploadProgressSection').removeClass('d-none');
-
-            // Step 1 — Validate
-            setStep('ustep1','active');
-            await sleep(400);
-            setStep('ustep1','done');
-
-            // Step 2 — Extract
-            setStep('ustep2','active');
-            await sleep(350);
-
-            // Step 3 — Chunking (starts on server side, show active)
-            setStep('ustep3','active');
-
-            // POST to server (steps 3-6 happen inside)
-            var formData = new FormData();
-            formData.append('subjectId', subId);
-            formData.append('title', title);
-            formData.append('file', file);
-            formData.append('__RequestVerificationToken', token);
-
-            try {
-                var res = await fetch('/Chat/UploadStudentDocument', { method: 'POST', body: formData });
-                var data = await res.json();
-
-                if (!data.success) {
-                    var failStep = data.step || 3;
-                    ['ustep1','ustep2','ustep3','ustep4','ustep5','ustep6'].forEach(function(id, i) {
-                        if (i + 1 < failStep)  setStep(id, 'done');
-                        else if (i + 1 === failStep) setStep(id, 'error');
-                    });
-                    $('#uploadResultMsg').removeClass('d-none').html('<div class="alert alert-danger py-2" style="font-size:.8rem;"><i class="bi bi-exclamation-triangle-fill"></i> ' + data.message + '</div>');
-                    $('#btnUploadAnother').removeClass('d-none');
-                    $('#uploadModalCloseBtn').prop('disabled', false);
-                    return;
-                }
-
-                // Success — animate remaining steps
-                setStep('ustep2','done');
-                setStep('ustep3','done');
-                setStep('ustep4','active'); await sleep(300); setStep('ustep4','done');
-                setStep('ustep5','active'); await sleep(300); setStep('ustep5','done');
-                setStep('ustep6','active');
-                loadDocumentsForSubject(subId);
-                await sleep(300); setStep('ustep6','done');
-
-                $('#uploadResultMsg').removeClass('d-none').html('<div class="alert py-2" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#34d399;font-size:.8rem;"><i class="bi bi-check-circle-fill"></i> ' + data.message + '</div>');
-                $('#btnUploadAnother').removeClass('d-none');
-                $('#btnUploadDone').removeClass('d-none');
-            } catch(e) {
-                setStep('ustep3','error');
-                $('#uploadResultMsg').removeClass('d-none').html('<div class="alert alert-danger py-2" style="font-size:.8rem;"><i class="bi bi-exclamation-triangle-fill"></i> Lỗi kết nối: ' + e.message + '</div>');
-                $('#btnUploadAnother').removeClass('d-none');
-            }
-            $('#uploadModalCloseBtn').prop('disabled', false);
-        }
+        // Removed loadDocumentsForSubject and upload related functions
 
         function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -454,6 +220,8 @@
             $("#activeSubjectCode").text(selectedSubText);
 
             $("#sessionHeaderActions").removeClass("d-none");
+            $("#chatSearchContainer").removeClass("d-none");
+            $("#chatSearchInput").val("");
             $("#chatPlaceholderArea").addClass("d-none");
             $("#chatForm").removeClass("d-none");
             
@@ -584,7 +352,7 @@
                         // Render normal Bot bubble
                         var botHtml = `
                             <div class="chat-bubble chat-bubble-bot align-self-start border border-white border-opacity-10" onclick="showCitationsForHistory('${res.historyId}')">
-                                <div class="bot-text">${formatResponseText(res.botResponse)}</div>
+                                <div class="bot-text">${formatResponseText(res.botResponse, res.historyId)}</div>
                                 
                                 <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-white border-opacity-10" style="font-size:0.7rem;">
                                     <span class="text-muted-custom"><i class="bi bi-clock"></i> ${res.timestamp}</span>
@@ -649,7 +417,7 @@
 
             var botHtml = `
                 <div class="chat-bubble chat-bubble-bot align-self-start border border-white border-opacity-10" onclick="showCitationsForHistory('${h.historyId}')">
-                    <div class="bot-text">${formatResponseText(h.botResponse)}</div>
+                    <div class="bot-text">${formatResponseText(h.botResponse, h.historyId)}</div>
                     
                     <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-white border-opacity-10" style="font-size:0.7rem;">
                         <span class="text-muted-custom"><i class="bi bi-clock"></i> ${h.timestamp}</span>
@@ -684,11 +452,10 @@
                 html += `
                     <div class="citation-card hover-scale citation-card-item" id="cite-card-${c.chunkId}">
                         <div class="citation-card-title">
-                            <span>Nguồn [${index + 1}] - Trang ${c.pageNumber}</span>
+                            <span>Nguồn [${index + 1}] - ${c.documentTitle}</span>
                             ${scoreText}
                             <i class="bi bi-bookmark-fill text-glow"></i>
                         </div>
-                        <div class="small text-white fw-bold mb-1 text-truncate" style="font-size:0.75rem;">${c.documentTitle}</div>
                         <div class="citation-card-body font-monospace mt-1">${escapeHtml(c.snippet)}</div>
                     </div>
                 `;
@@ -769,8 +536,10 @@
 
         // --- UI Utilities ---
         function resetChatSpace() {
-            $("#sessionHeaderActions").addClass("d-none");
-            $("#activeSessionTitle").text("Vui lòng chọn hoặc tạo cuộc trò chuyện mới");
+             $("#sessionHeaderActions").addClass("d-none");
+             $("#chatSearchContainer").addClass("d-none");
+             $("#chatSearchInput").val("");
+             $("#activeSessionTitle").text("Vui lòng chọn hoặc tạo cuộc trò chuyện mới");
             $("#activeSubjectCode").text("VietRAG Assistant");
             $("#chatMessagesArea").html(`
                 <div class="w-100 h-100 d-flex align-items-center justify-content-center" id="chatPlaceholderArea">
@@ -800,12 +569,20 @@
         }
 
         // Regex parsing to convert [Nguồn X - Trang Y] or [Nguồn X] into clickable HTML badges
-        function formatResponseText(text) {
+        function formatResponseText(text, historyId) {
+            if (!text) return "";
+            var formatted = text;
+            
             // Converts [Nguồn X - Trang Y]
-            var formatted = text.replace(/\[Nguồn (\d+) - Trang (\d+)\]/g, function(match, indexStr, pageStr) {
+            formatted = formatted.replace(/\[Nguồn (\d+) - Trang (\d+)\]/g, function(match, indexStr, pageStr) {
                 var index = parseInt(indexStr) - 1;
-                // Since this is in bot response, we link to active session's cached citations
-                return `<span class="citation-badge" onclick="highlightCitationByOrder(${index})"><i class="bi bi-file-earmark-text"></i> Nguồn ${indexStr} (Trang ${pageStr})</span>`;
+                return `<span class="citation-badge clickable-citation" onclick="event.stopPropagation(); highlightCitationByOrder(${index}, '${historyId}')"><i class="bi bi-file-earmark-text"></i> Nguồn ${indexStr} (Trang ${pageStr})</span>`;
+            });
+
+            // Converts [Nguồn X]
+            formatted = formatted.replace(/\[Nguồn (\d+)\]/g, function(match, indexStr) {
+                var index = parseInt(indexStr) - 1;
+                return `<span class="citation-badge clickable-citation" onclick="event.stopPropagation(); highlightCitationByOrder(${index}, '${historyId}')"><i class="bi bi-file-earmark-text"></i> Nguồn ${indexStr}</span>`;
             });
 
             // Converts markdown bullet bolding
@@ -814,13 +591,106 @@
         }
 
         // Highlight citation card by index position
-        function highlightCitationByOrder(index) {
+        function highlightCitationByOrder(index, historyId) {
             if (!activeSessionId) return;
-            var historyId = Object.keys(activeCitations).pop(); // Get most recent or click source context
+            // Ensure citations drawer is shown for this history first
+            showCitationsForHistory(historyId);
+            
             var cites = activeCitations[historyId];
             if (cites && cites[index]) {
                 highlightCitationCard(cites[index].chunkId);
             }
+        }
+
+        function loadSessionsForSubject() {
+            var subId = $("#subjectSelect").val();
+            if (!subId) {
+                $("#btnNewChat").addClass("d-none");
+                $("#ragSettingsPanel").addClass("d-none");
+                $("#sessionDivider").addClass("d-none");
+                $("#sessionLabel").addClass("d-none");
+                $("#sessionSearchContainer").addClass("d-none");
+                $("#sessionSearchInput").val("");
+                $("#sessionList").empty();
+                $("#sessionPlaceholder").removeClass("d-none");
+                resetChatSpace();
+                return;
+            }
+            $("#sessionPlaceholder").addClass("d-none");
+            $("#btnNewChat").removeClass("d-none");
+            $("#ragSettingsPanel").removeClass("d-none");
+            $("#sessionDivider").removeClass("d-none");
+            $("#sessionLabel").removeClass("d-none");
+            $("#sessionSearchContainer").removeClass("d-none");
+            $("#sessionSearchInput").val("");
+            $("#sessionList").html('<div class="text-center text-muted-custom py-3"><div class="spinner-border text-glow spinner-border-sm"></div></div>');
+            $.get("/Chat/GetSessions?subjectId=" + subId, function (data) {
+                if (data.length === 0) { $("#sessionList").html('<div class="text-center text-muted-custom py-3 small">Chưa có hội thoại nào. Tạo mới bên trên!</div>'); return; }
+                var html = "";
+                data.forEach(function (s) {
+                    var isActive = (s.sessionId === activeSessionId) ? "active" : "";
+                    html += `<div class="session-item ${isActive}" data-id="${s.sessionId}" onclick="selectSession('${s.sessionId}', this)"><div class="d-flex align-items-center gap-2 overflow-hidden text-nowrap"><i class="bi bi-chat-left-text text-glow"></i><span class="fw-bold small session-text text-truncate">${s.title}</span></div><span class="small text-muted-custom" style="font-size:0.65rem;">${s.lastUpdatedAt}</span></div>`;
+                });
+                $("#sessionList").html(html);
+            });
+        }
+
+        function reloadChatSubjects() {
+            var selectedId = $("#subjectSelect").val();
+            $.get("/Chat/GetSubjects", function (data) {
+                var html = '<option value="">-- Chọn môn học --</option>';
+                data.forEach(function (sub) {
+                    html += `<option value="${sub.subjectId}">${sub.subjectCode} - ${sub.subjectName}</option>`;
+                });
+                $("#subjectSelect").html(html);
+                if (selectedId) {
+                    var exists = data.some(function(sub) { return sub.subjectId == selectedId; });
+                    if (exists) {
+                        $("#subjectSelect").val(selectedId);
+                    } else {
+                        $("#subjectSelect").val("");
+                        loadSessionsForSubject();
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            // SignalR Connection
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/newsHub")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("ReceiveSubjectUpdate", function () {
+                reloadChatSubjects();
+            });
+
+            connection.start().catch(err => console.error("SignalR Connection Error: ", err));
+        });
+
+        function filterSessions() {
+            var val = $("#sessionSearchInput").val().toLowerCase().trim();
+            $("#sessionList .session-item").each(function () {
+                var text = $(this).find(".session-text").text().toLowerCase();
+                if (text.indexOf(val) > -1) {
+                    $(this).removeClass("d-none");
+                } else {
+                    $(this).addClass("d-none");
+                }
+            });
+        }
+
+        function filterMessages() {
+            var val = $("#chatSearchInput").val().toLowerCase().trim();
+            $("#chatMessagesArea .chat-bubble").each(function () {
+                var text = $(this).text().toLowerCase();
+                if (text.indexOf(val) > -1) {
+                    $(this).removeClass("d-none");
+                } else {
+                    $(this).addClass("d-none");
+                }
+            });
         }
     </script>
 }
