@@ -666,12 +666,21 @@ namespace PresentationLayer.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ReIndexAll(int subjectId)
         {
             try
             {
+                var role = User.FindFirst(ClaimTypes.Role)?.Value;
+                if (role != "Admin")
+                {
+                    var auth = await CheckPermissionForSubjectAsync(subjectId);
+                    if (!auth.Success)
+                    {
+                        return Json(new { success = false, message = auth.Message });
+                    }
+                }
+
                 var docs = (await _documentService.GetIndexedDocumentsAsync(subjectId)).ToList();
                 if (!docs.Any())
                 {

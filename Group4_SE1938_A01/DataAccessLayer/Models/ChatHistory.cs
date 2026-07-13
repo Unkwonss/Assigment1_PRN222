@@ -17,6 +17,10 @@ public partial class ChatHistory
 
     public DateTime? Timestamp { get; set; }
 
+    public int? TokensIn { get; set; }
+
+    public int? TokensOut { get; set; }
+
     public virtual ICollection<ChatCitation> ChatCitations { get; set; } = new List<ChatCitation>();
 
     public virtual ChatSession Session { get; set; } = null!;

@@ -11,6 +11,14 @@ public partial class Subject
 
     public string SubjectName { get; set; } = null!;
 
+    public int? DefaultModelId { get; set; }
+
+    public int? DefaultStrategyId { get; set; }
+
+    public int? DefaultChunkSize { get; set; }
+
+    public int? DefaultChunkOverlap { get; set; }
+
     public virtual ICollection<SubjectTeacher> SubjectTeachers { get; set; } = new List<SubjectTeacher>();
 
     public virtual ICollection<Chapter> Chapters { get; set; } = new List<Chapter>();

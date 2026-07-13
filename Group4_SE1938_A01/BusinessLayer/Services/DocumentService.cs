@@ -77,6 +77,10 @@ namespace BusinessLayer.Services
                 SubjectId = subject.SubjectId,
                 SubjectCode = subject.SubjectCode,
                 SubjectName = subject.SubjectName,
+                DefaultModelId = subject.DefaultModelId,
+                DefaultStrategyId = subject.DefaultStrategyId,
+                DefaultChunkSize = subject.DefaultChunkSize,
+                DefaultChunkOverlap = subject.DefaultChunkOverlap,
                 ManagedByUserId = headTeacher?.UserId,
                 ManagedByUserName = headTeacher?.User?.FullName,
                 AssignedTeacherIds = subject.SubjectTeachers?.Select(st => st.UserId).ToList() ?? new List<int>(),
@@ -104,7 +108,11 @@ namespace BusinessLayer.Services
             {
                 SubjectId = dto.SubjectId,
                 SubjectCode = dto.SubjectCode,
-                SubjectName = dto.SubjectName
+                SubjectName = dto.SubjectName,
+                DefaultModelId = dto.DefaultModelId,
+                DefaultStrategyId = dto.DefaultStrategyId,
+                DefaultChunkSize = dto.DefaultChunkSize,
+                DefaultChunkOverlap = dto.DefaultChunkOverlap
             };
         }
 
@@ -342,6 +350,10 @@ namespace BusinessLayer.Services
             {
                 existing.SubjectCode = subjectDto.SubjectCode;
                 existing.SubjectName = subjectDto.SubjectName;
+                existing.DefaultModelId = subjectDto.DefaultModelId;
+                existing.DefaultStrategyId = subjectDto.DefaultStrategyId;
+                existing.DefaultChunkSize = subjectDto.DefaultChunkSize;
+                existing.DefaultChunkOverlap = subjectDto.DefaultChunkOverlap;
                 _subjectRepo.Update(existing);
                 await _subjectRepo.SaveAsync();
             }

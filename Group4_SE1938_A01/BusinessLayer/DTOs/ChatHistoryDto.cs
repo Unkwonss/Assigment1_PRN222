@@ -12,6 +12,9 @@ namespace BusinessLayer.DTOs
         public string BotResponse { get; set; } = null!;
         public DateTime? Timestamp { get; set; }
 
+        public int? TokensIn { get; set; }
+        public int? TokensOut { get; set; }
+
         public virtual ICollection<ChatCitationDto> ChatCitations { get; set; } = new List<ChatCitationDto>();
         public virtual ChatSessionDto? Session { get; set; }
     }
