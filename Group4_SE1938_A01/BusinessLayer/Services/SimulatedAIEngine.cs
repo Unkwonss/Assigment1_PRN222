@@ -185,6 +185,11 @@ namespace BusinessLayer.Services
                                 new { text = sbPrompt.ToString() }
                             }
                         }
+                    },
+                    generationConfig = new
+                    {
+                        maxOutputTokens = 2048,
+                        temperature = 0.7
                     }
                 };
 

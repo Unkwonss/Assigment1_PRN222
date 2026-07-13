@@ -250,6 +250,8 @@ namespace BusinessLayer.Services
             string subjectCode = session.Subject?.SubjectCode ?? "PRN222";
             int subjectId = session.SubjectId;
             string botResponse = "";
+            int promptTokens = 0;
+            int completionTokens = 0;
             var relevantChunks = await GetRelevantChunksAsync(
                 userMessage, subjectId, embeddingModelId, strategyId, chunkSize, chunkOverlap, topK: 3);
 
@@ -311,12 +313,16 @@ namespace BusinessLayer.Services
                     "[RAG-PIPELINE] Calling GeminiService with {ChunkCount} chunks, {HistoryCount} history items, subject={Subject}",
                     contextTexts.Count, historyTuples.Count, subjectCode);
 
-                botResponse = await _geminiService.GenerateResponseAsync(
+                var geminiResult = await _geminiService.GenerateResponseAsync(
                     userMessage,
                     contextTexts,
                     historyTuples,
                     subjectCode
                 );
+                
+                botResponse = geminiResult.Response;
+                promptTokens = geminiResult.PromptTokens;
+                completionTokens = geminiResult.CompletionTokens;
             }
 
             // Save Chat History
@@ -326,6 +332,8 @@ namespace BusinessLayer.Services
                 UserMessage = userMessage,
                 StandaloneQuery = userMessage,
                 BotResponse = botResponse,
+                TokensIn = promptTokens,
+                TokensOut = completionTokens,
                 Timestamp = DateTime.UtcNow
             };
 

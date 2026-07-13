@@ -380,6 +380,26 @@ namespace PresentationLayer.Controllers
                 return Json(new { success = false, message = "Chỉ chấp nhận các tệp định dạng .txt, .pdf, .docx, .pptx." });
             }
 
+            // Calculate FileHash (SHA256)
+            string fileHash = "";
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                using (var stream = file.OpenReadStream())
+                {
+                    var hashBytes = sha256.ComputeHash(stream);
+                    fileHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                }
+            }
+
+            var chapter = await _documentService.GetChapterByIdAsync(chapterId);
+            if (chapter == null) return Json(new { success = false, message = "Không tìm thấy chương học." });
+
+            bool isDuplicate = await _documentService.IsDuplicateFileHashAsync(chapter.SubjectId, fileHash);
+            if (isDuplicate)
+            {
+                return Json(new { success = false, message = "Tài liệu này đã tồn tại trong môn học, vui lòng không tải lên lại!" });
+            }
+
             // Extract content
             string textContent = "";
             if (ext == ".txt")
@@ -408,19 +428,11 @@ namespace PresentationLayer.Controllers
             }
 
             // Check duplicate filename in chapter
-            try
+            var existingDocs = await _documentService.GetDocumentsByChapterIdAsync(chapterId);
+            var duplicate = existingDocs.FirstOrDefault(d => d.FileName.Equals(file.FileName, StringComparison.OrdinalIgnoreCase));
+            if (duplicate != null)
             {
-                var existingDocs = await _documentService.GetDocumentsByChapterIdAsync(chapterId);
-                var duplicate = existingDocs.FirstOrDefault(d => d.FileName.Equals(file.FileName, StringComparison.OrdinalIgnoreCase));
-                if (duplicate != null)
-                {
-                    _logger.LogInformation("Duplicate document detected: {FileName}. Deleting old document (Id={DocId}) first.", file.FileName, duplicate.DocumentId);
-                    await _documentService.DeleteDocumentAsync(duplicate.DocumentId);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to check or delete duplicate document: {Message}", ex.Message);
+                return Json(new { success = false, message = $"Một tài liệu khác mang tên '{file.FileName}' đã tồn tại trong chương này. Vui lòng đổi tên tệp trước khi tải lên để tránh nhầm lẫn!" });
             }
 
             var doc = new DocumentDto
@@ -431,7 +443,8 @@ namespace PresentationLayer.Controllers
                 FilePath = file.FileName, // Stored as metadata
                 FileType = ext.Substring(1).ToUpper(),
                 FileSize = file.Length,
-                UploadedBy = userId
+                UploadedBy = userId,
+                FileHash = fileHash
             };
 
             try
@@ -439,7 +452,6 @@ namespace PresentationLayer.Controllers
                 var uploaded = await _documentService.UploadDocumentAsync(doc, textContent);
 
                 // Auto index if default setting exists
-                var chapter = await _documentService.GetChapterByIdAsync(chapterId);
                 var subject = chapter != null ? await _documentService.GetSubjectByIdAsync(chapter.SubjectId) : null;
                 bool wasAutoIndexed = false;
                 if (subject != null && subject.DefaultModelId.HasValue && subject.DefaultStrategyId.HasValue)
@@ -561,7 +573,6 @@ namespace PresentationLayer.Controllers
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteDocument(int documentId)
         {
             var document = await _documentService.GetDocumentByIdAsync(documentId);
@@ -583,9 +594,10 @@ namespace PresentationLayer.Controllers
                 await _hubContext.Clients.All.SendAsync("ReceiveDocumentUpdate", chapterId);
                 return Json(new { success = true, message = "Xóa tài liệu thành công!" });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return Json(new { success = false, message = "Lỗi khi xóa tài liệu." });
+                _logger.LogError(ex, "Lỗi khi xóa tài liệu {DocId}: {Message}", documentId, ex.Message);
+                return Json(new { success = false, message = "Lỗi khi xóa tài liệu: " + ex.Message });
             }
         }
 

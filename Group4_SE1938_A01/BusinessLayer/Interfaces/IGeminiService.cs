@@ -5,7 +5,7 @@ namespace BusinessLayer.Interfaces
 {
     public interface IGeminiService
     {
-        Task<string> GenerateResponseAsync(
+        Task<(string Response, int PromptTokens, int CompletionTokens)> GenerateResponseAsync(
             string userQuestion,
             List<string> contextChunks,
             List<(string role, string content)> conversationHistory,

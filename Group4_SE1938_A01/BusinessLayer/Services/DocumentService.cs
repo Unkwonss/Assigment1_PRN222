@@ -162,6 +162,7 @@ namespace BusinessLayer.Services
                 Status = doc.Status,
                 UploadedBy = doc.UploadedBy,
                 CreatedAt = doc.CreatedAt,
+                FileHash = doc.FileHash,
                 Chapter = doc.Chapter != null ? new ChapterDto
                 {
                     ChapterId = doc.Chapter.ChapterId,
@@ -201,7 +202,8 @@ namespace BusinessLayer.Services
                 TotalPages = dto.TotalPages,
                 Status = dto.Status,
                 UploadedBy = dto.UploadedBy,
-                CreatedAt = dto.CreatedAt
+                CreatedAt = dto.CreatedAt,
+                FileHash = dto.FileHash
             };
         }
 
@@ -476,10 +478,16 @@ namespace BusinessLayer.Services
         #endregion
 
         #region Documents
+        public async Task<bool> IsDuplicateFileHashAsync(int subjectId, string fileHash)
+        {
+            var docs = await _documentRepo.GetAllAsync(d => d.FileHash == fileHash && d.Chapter.SubjectId == subjectId && d.Status != "Deleted", includeProperties: "Chapter");
+            return docs.Any();
+        }
+
         public async Task<IEnumerable<DocumentDto>> GetDocumentsByChapterIdAsync(int chapterId)
         {
             var docs = await _documentRepo.GetAllAsync(
-                filter: d => d.ChapterId == chapterId,
+                filter: d => d.ChapterId == chapterId && d.Status != "Deleted",
                 includeProperties: "UploadedByNavigation"
             );
             return docs.Select(d => MapDocumentToDto(d)!).ToList();
@@ -554,7 +562,9 @@ namespace BusinessLayer.Services
                     try { File.Delete(doc.FilePath); } catch {}
                 }
 
-                _documentRepo.Delete(doc);
+                // Soft delete by updating status
+                doc.Status = "Deleted";
+                _documentRepo.Update(doc);
                 await _documentRepo.SaveAsync();
             }
         }

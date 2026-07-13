@@ -799,22 +799,22 @@
                     html += `
                         <div class="card-glass p-3 mb-2" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
                             <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                                <div class="d-flex align-items-start gap-2">
-                                    <i class="bi bi-file-earmark-code fs-4 text-glow"></i>
-                                    <div>
-                                        <div class="fw-bold text-white small">${doc.title}</div>
-                                        <div class="small text-muted-custom" style="font-size:0.75rem;">${doc.fileName} (${doc.fileSize})</div>
+                                <div class="d-flex align-items-start gap-2 text-truncate" style="min-width:0;">
+                                    <i class="bi bi-file-earmark-code fs-4 text-glow flex-shrink-0"></i>
+                                    <div class="text-truncate" style="min-width:0;">
+                                        <div class="fw-bold text-white small text-truncate" title="${doc.title}">${doc.title}</div>
+                                        <div class="small text-muted-custom text-truncate" title="${doc.fileName}" style="font-size:0.75rem;">${doc.fileName} (${doc.fileSize})</div>
                                     </div>
                                 </div>
-                                <div class="d-flex flex-column align-items-end gap-1">
+                                <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
                                     <span class="badge ${badgeColor} bg-opacity-25 border border-white border-opacity-10">${doc.status}</span>
                                     ${embedBadge}
                                 </div>
                             </div>
                             
                             <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-white border-opacity-10">
-                                <span class="small text-muted-custom" style="font-size:0.7rem;"><i class="bi bi-person-circle"></i> Người tải: ${doc.uploadedBy}</span>
-                                <div class="d-inline-flex gap-1">
+                                <span class="small text-muted-custom text-truncate" title="Người tải: ${doc.uploadedBy}" style="font-size:0.7rem; min-width:0; margin-right:10px;"><i class="bi bi-person-circle"></i> Người tải: ${doc.uploadedBy}</span>
+                                <div class="d-inline-flex gap-1 flex-shrink-0">
                                     ${docActionBtns}
                                     <button class="btn btn-sm btn-outline-glass py-1 px-2 d-flex align-items-center gap-1" onclick="openViewChunksModal(${doc.documentId})" style="font-size:0.75rem;">
                                         <i class="bi bi-eye-fill"></i> Xem
@@ -1264,25 +1264,25 @@
                     html += `
                         <div class="card-glass p-3 mb-2" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
                             <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                                <div class="d-flex align-items-start gap-2">
-                                    <i class="bi bi-file-earmark-code fs-4 text-glow"></i>
-                                    <div>
-                                        <h6 class="text-white mb-1">${doc.title}</h6>
-                                        <div class="text-muted-custom" style="font-size:0.75rem;">
+                                <div class="d-flex align-items-start gap-2 text-truncate" style="min-width:0;">
+                                    <i class="bi bi-file-earmark-code fs-4 text-glow flex-shrink-0"></i>
+                                    <div class="text-truncate" style="min-width:0;">
+                                        <h6 class="text-white mb-1 text-truncate" title="${doc.title}">${doc.title}</h6>
+                                        <div class="text-muted-custom text-truncate" title="${doc.fileName}" style="font-size:0.75rem;">
                                             <span>${doc.fileName} (${(doc.fileSize / 1024).toFixed(1)} KB)</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="d-flex gap-1">
+                                <div class="d-flex gap-1 flex-shrink-0">
                                     ${docActionBtns}
                                 </div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-white border-opacity-5">
-                                <div class="d-flex gap-2">
+                                <div class="d-flex gap-2 flex-wrap flex-shrink-0" style="min-width:0;">
                                     <span class="badge ${badgeColor} bg-opacity-25 border border-white border-opacity-10">${doc.status}</span>
                                     ${embedBadge}
                                 </div>
-                                <div class="d-flex align-items-center gap-1 text-muted-custom" style="font-size:0.75rem;">
+                                <div class="d-flex align-items-center gap-1 text-muted-custom flex-shrink-0" style="font-size:0.75rem;">
                                     <button class="btn btn-link text-glow p-0" onclick="openViewChunksModal(${doc.documentId})" style="font-size:0.75rem; text-decoration:none;">
                                         <i class="bi bi-eye"></i> Xem Chunks
                                     </button>

@@ -28,7 +28,7 @@ namespace BusinessLayer.Services
             _logger = logger;
         }
 
-        public async Task<string> GenerateResponseAsync(
+        public async Task<(string Response, int PromptTokens, int CompletionTokens)> GenerateResponseAsync(
             string userQuestion,
             List<string> contextChunks,
             List<(string role, string content)> conversationHistory,
@@ -67,14 +67,14 @@ namespace BusinessLayer.Services
 
                 _logger.LogInformation(
                     "[RAG] Gemini response (first 300 chars): {Response}",
-                    response.Length > 300 ? response[..300] : response);
+                    response.Response.Length > 300 ? response.Response[..300] : response.Response);
 
                 return response;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Lỗi khi gọi Gemini API: {Message}", ex.Message);
-                return "Xin lỗi, đã có lỗi xảy ra khi xử lý câu hỏi của bạn.";
+                return ("Xin lỗi, đã có lỗi xảy ra khi xử lý câu hỏi của bạn.", 0, 0);
             }
         }
 
@@ -129,12 +129,12 @@ namespace BusinessLayer.Services
             return sb.ToString();
         }
 
-        private async Task<string> CallGeminiAPIAsync(string prompt)
+        private async Task<(string Response, int PromptTokens, int CompletionTokens)> CallGeminiAPIAsync(string prompt)
         {
             if (string.IsNullOrWhiteSpace(_settings.ApiKey))
             {
                 _logger.LogWarning("GeminiSettings.ApiKey is empty. Falling back to local response.");
-                return "Hệ thống chưa được cấu hình khóa API Gemini. Vui lòng liên hệ quản trị viên.";
+                return ("Hệ thống chưa được cấu hình khóa API Gemini. Vui lòng liên hệ quản trị viên.", 0, 0);
             }
 
             var client = _httpClientFactory.CreateClient("GeminiClient");
@@ -199,7 +199,7 @@ namespace BusinessLayer.Services
 
                         // Non-retryable error
                         if (statusCode == 429)
-                            return "Hệ thống đang bận (API rate limit). Vui lòng đợi 30 giây rồi thử lại.";
+                            return ("Hệ thống đang bận (API rate limit). Vui lòng đợi 30 giây rồi thử lại.", 0, 0);
 
                         response.EnsureSuccessStatusCode();
                     }
@@ -215,7 +215,7 @@ namespace BusinessLayer.Services
                         candidates.GetArrayLength() == 0)
                     {
                         _logger.LogWarning("Gemini response không có candidates hợp lệ.");
-                        return "Không nhận được phản hồi từ AI.";
+                        return ("Không nhận được phản hồi từ AI.", 0, 0);
                     }
 
                     var firstCandidate = candidates[0];
@@ -225,7 +225,7 @@ namespace BusinessLayer.Services
                         parts.GetArrayLength() == 0)
                     {
                         _logger.LogWarning("Gemini response không có content/parts hợp lệ.");
-                        return "Không nhận được phản hồi từ AI.";
+                        return ("Không nhận được phản hồi từ AI.", 0, 0);
                     }
 
                     // Loop through all parts in the candidate's content to support multi-part text generation (prevent cut-off)
@@ -238,8 +238,16 @@ namespace BusinessLayer.Services
                         }
                     }
 
+                    int promptTokens = 0;
+                    int completionTokens = 0;
+                    if (root.TryGetProperty("usageMetadata", out var usageMetadata))
+                    {
+                        if (usageMetadata.TryGetProperty("promptTokenCount", out var ptc)) promptTokens = ptc.GetInt32();
+                        if (usageMetadata.TryGetProperty("candidatesTokenCount", out var ctc)) completionTokens = ctc.GetInt32();
+                    }
+
                     var text = sbText.ToString();
-                    return string.IsNullOrWhiteSpace(text) ? "Không nhận được phản hồi từ AI." : text;
+                    return (string.IsNullOrWhiteSpace(text) ? "Không nhận được phản hồi từ AI." : text, promptTokens, completionTokens);
                 }
                 catch (TaskCanceledException) when (attempt < maxRetries)
                 {
@@ -253,7 +261,7 @@ namespace BusinessLayer.Services
                 }
             }
 
-            return "Không thể kết nối đến Gemini API sau nhiều lần thử. Vui lòng thử lại.";
+            return ("Không thể kết nối đến Gemini API sau nhiều lần thử. Vui lòng thử lại.", 0, 0);
         }
     }
 }

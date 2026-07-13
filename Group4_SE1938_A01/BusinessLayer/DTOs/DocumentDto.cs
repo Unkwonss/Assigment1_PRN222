@@ -16,6 +16,7 @@ namespace BusinessLayer.DTOs
         public string Status { get; set; } = null!;
         public int UploadedBy { get; set; }
         public DateTime? CreatedAt { get; set; }
+        public string? FileHash { get; set; }
 
         public virtual ChapterDto? Chapter { get; set; }
         public virtual ICollection<DocumentIndexDto> DocumentIndices { get; set; } = new List<DocumentIndexDto>();

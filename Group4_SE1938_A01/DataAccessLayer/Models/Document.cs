@@ -26,6 +26,8 @@ public partial class Document
     public int UploadedBy { get; set; }
 
     public DateTime? CreatedAt { get; set; }
+    
+    public string? FileHash { get; set; }
 
     public virtual Chapter Chapter { get; set; } = null!;
 

@@ -26,6 +26,7 @@ namespace BusinessLayer.Interfaces
         Task DeleteChapterAsync(int id);
 
         // Documents
+        Task<bool> IsDuplicateFileHashAsync(int subjectId, string fileHash);
         Task<IEnumerable<DocumentDto>> GetDocumentsByChapterIdAsync(int chapterId);
         Task<IEnumerable<DocumentDto>> GetIndexedDocumentsAsync(int subjectId);
         Task<DocumentDto?> GetDocumentByIdAsync(int id);
