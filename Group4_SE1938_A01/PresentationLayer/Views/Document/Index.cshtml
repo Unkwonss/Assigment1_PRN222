@@ -1004,7 +1004,23 @@
                     return;
                 }
 
-                var html = "";
+                // Calculate totals for summary
+                var totalChunks = data.length;
+                var totalTokens = 0;
+                data.forEach(function (c) { totalTokens += (c.tokenCount || 0); });
+
+                var html = `
+                    <div class="d-flex align-items-center gap-3 mb-3 p-3 rounded-3" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(99, 102, 241, 0.3);">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-grid-3x3-gap-fill text-glow fs-5"></i>
+                            <div>
+                                <span class="fw-bold text-white">Tổng: ${totalChunks} phân mảnh</span>
+                                <span class="text-muted-custom mx-2">|</span>
+                                <span class="text-muted-custom"><i class="bi bi-ticket-perforation"></i> ~${totalTokens.toLocaleString()} tokens</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
                 data.forEach(function (c) {
                     html += `
                         <div class="card p-3 mb-2 border border-white border-opacity-10 text-white bg-dark bg-opacity-50 hover-scale">
