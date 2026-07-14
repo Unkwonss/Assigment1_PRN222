@@ -66,7 +66,7 @@ namespace PresentationLayer.Controllers
             return Json(sessions.Select(s => new {
                 s.SessionId,
                 s.Title,
-                LastUpdatedAt = s.LastUpdatedAt?.ToString("dd/MM/yyyy HH:mm")
+                LastUpdatedAt = s.LastUpdatedAt?.AddHours(7).ToString("dd/MM/yyyy HH:mm")
             }));
         }
 
@@ -107,7 +107,7 @@ namespace PresentationLayer.Controllers
                 h.HistoryId,
                 h.UserMessage,
                 h.BotResponse,
-                Timestamp = h.Timestamp?.ToString("HH:mm"),
+                Timestamp = h.Timestamp?.AddHours(7).ToString("HH:mm"),
                 Citations = h.ChatCitations.Select(c => new {
                     c.CitationId,
                     c.ChunkId,
@@ -137,7 +137,7 @@ namespace PresentationLayer.Controllers
                     historyId = historyRecord.HistoryId,
                     userMessage = historyRecord.UserMessage,
                     botResponse = historyRecord.BotResponse,
-                    timestamp = historyRecord.Timestamp?.ToString("HH:mm"),
+                    timestamp = historyRecord.Timestamp?.AddHours(7).ToString("HH:mm"),
                     citations = result.Citations.Select(x => new {
                         x.Citation.CitationId,
                         x.Citation.ChunkId,

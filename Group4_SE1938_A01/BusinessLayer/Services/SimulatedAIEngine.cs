@@ -126,7 +126,7 @@ namespace BusinessLayer.Services
         {
             if (_configuration == null) return null;
 
-            string? geminiApiKey = _configuration["Gemini:ApiKey"];
+            string? geminiApiKey = _configuration["GeminiSettings:ApiKey"] ?? _configuration["Gemini:ApiKey"];
             if (!string.IsNullOrEmpty(geminiApiKey) && geminiApiKey != "YOUR_GEMINI_API_KEY")
             {
                 return await CallGeminiApiAsync(userQuery, contexts, subjectCode, geminiApiKey);

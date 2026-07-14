@@ -506,14 +506,14 @@
                     var rowHtml = `
                         <tr>
                             <td><span class="text-white fw-bold d-block text-truncate" style="max-width:200px;" title="${r.questionText}">${r.questionText}</span></td>
-                            <td><code class="text-glow text-opacity-75">${r.latencyMilliseconds}ms</code></td>
-                            <td><span class="badge bg-primary bg-opacity-15 text-glow">${r.faithfulness}</span></td>
-                            <td><span class="badge bg-secondary bg-opacity-15 text-glow" style="color:#d8b4fe !important;">${r.relevance}</span></td>
-                            <td><span class="badge bg-info bg-opacity-15 text-glow" style="color:#22d3ee !important;">${r.precision}</span></td>
-                            <td><span class="badge bg-success bg-opacity-15 text-glow" style="color:#34d399 !important;">${r.recall}</span></td>
+                            <td><span class="badge" style="background:rgba(148,163,184,0.15); color:#e2e8f0; border:1px solid rgba(148,163,184,0.3); font-weight:500; padding:6px 12px;">${r.latencyMilliseconds}ms</span></td>
+                            <td><span class="badge rounded-pill" style="background:rgba(99,102,241,0.25); color:#a5b4fc; border:1px solid rgba(129,140,248,0.5); font-weight:600; padding:6px 14px; font-size:0.85rem;">${r.faithfulness}</span></td>
+                            <td><span class="badge rounded-pill" style="background:rgba(168,85,247,0.25); color:#d8b4fe; border:1px solid rgba(192,132,252,0.5); font-weight:600; padding:6px 14px; font-size:0.85rem;">${r.relevance}</span></td>
+                            <td><span class="badge rounded-pill" style="background:rgba(168,85,247,0.25); color:#d8b4fe; border:1px solid rgba(192,132,252,0.5); font-weight:600; padding:6px 14px; font-size:0.85rem;">${r.precision}</span></td>
+                            <td><span class="badge rounded-pill" style="background:rgba(16,185,129,0.25); color:#6ee7b7; border:1px solid rgba(52,211,153,0.5); font-weight:600; padding:6px 14px; font-size:0.85rem;">${r.recall}</span></td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-outline-glass py-0 px-2" onclick="openDetailsModal('${escapeQuotes(r.questionText)}', '${escapeQuotes(r.groundTruthText)}', '${escapeQuotes(r.generatedResponse)}')">
-                                    <i class="bi bi-file-text"></i> Xem
+                                <button class="btn btn-sm rounded-pill" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#e2e8f0; padding:5px 14px;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'" onclick="openDetailsModal('${escapeQuotes(r.questionText)}', '${escapeQuotes(r.groundTruthText)}', '${escapeQuotes(r.generatedResponse)}')">
+                                    <i class="bi bi-eye"></i> Xem
                                 </button>
                             </td>
                         </tr>
@@ -833,7 +833,7 @@
 
         function escapeQuotes(str) {
             if (!str) return "";
-            return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            return str.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, "\\n").replace(/\r/g, "\\r");
         }
     </script>
 }

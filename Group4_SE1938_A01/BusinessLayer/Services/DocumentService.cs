@@ -702,7 +702,7 @@ namespace BusinessLayer.Services
                         ChunkOrder = order,
                         Content = chunkText,
                         PageNumber = (order / 3) + 1, // Simulated page number mapping
-                        TokenCount = chunkText.Length / 4, // Rough approximation
+                        TokenCount = (int)(chunkText.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length * 1.3), // Word-based token estimation (~1.3 tokens per word for Vietnamese)
                         VectorStoreKey = vectorKey,
                         EmbeddingVector = embedding.Length > 0 ? SerializeVector(embedding) : null,
                         HasEmbedding = embedding.Length > 0

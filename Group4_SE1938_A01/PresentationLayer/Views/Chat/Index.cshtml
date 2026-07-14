@@ -58,7 +58,7 @@
             <div class="collapse mt-2" id="collapseRagSettings">
                 <div class="p-2 rounded bg-dark bg-opacity-25" style="border: 1px solid var(--border-glass);">
                     <div class="mb-2">
-                        <label class="small text-muted-custom">Embedding Model</label>
+                        <label class="small text-muted-custom">Mô hình nhúng (Model)</label>
                         <select id="ragModel" class="form-select form-glass py-1 px-2" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()">
                             @foreach (var m in models)
                             {
@@ -67,7 +67,7 @@
                         </select>
                     </div>
                     <div class="mb-2">
-                        <label class="small text-muted-custom">Strategy</label>
+                        <label class="small text-muted-custom">Chiến lược cắt (Strategy)</label>
                         <select id="ragStrategy" class="form-select form-glass py-1 px-2" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()">
                             @foreach (var s in strategies)
                             {
@@ -77,18 +77,15 @@
                     </div>
                     <div class="row g-2 mb-2">
                         <div class="col-6">
-                            <label class="small text-muted-custom">Size</label>
+                            <label class="small text-muted-custom">Kích thước (Size)</label>
                             <input type="number" id="ragSize" class="form-control form-glass py-1 px-2" value="500" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()" />
                         </div>
                         <div class="col-6">
-                            <label class="small text-muted-custom">Overlap</label>
+                            <label class="small text-muted-custom">Độ lặp (Overlap)</label>
                             <input type="number" id="ragOverlap" class="form-control form-glass py-1 px-2" value="100" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()" />
                         </div>
                     </div>
-                    <div id="sandboxConfigStatus" class="d-flex align-items-center gap-2 px-2 py-1 rounded" style="font-size:0.68rem; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); color:#34d399;">
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span id="sandboxStatusText">Cấu hình mặc định — áp dụng cho tin nhắn tiếp theo</span>
-                    </div>
+                    <!-- Removed sandboxConfigStatus alert for cleaner UI -->
                 </div>
             </div>
         </div>
@@ -447,7 +444,7 @@
             cites.forEach(function (c, index) {
                 var scoreText = '';
                 if (c.scorePercent !== undefined && c.scorePercent !== null) {
-                    scoreText = `<span class="text-glow fw-semibold">${c.scorePercent}% match</span>`;
+                    scoreText = `<span class="text-glow fw-semibold">${c.scorePercent}% độ khớp</span>`;
                 }
                 html += `
                     <div class="citation-card hover-scale citation-card-item" id="cite-card-${c.chunkId}">
