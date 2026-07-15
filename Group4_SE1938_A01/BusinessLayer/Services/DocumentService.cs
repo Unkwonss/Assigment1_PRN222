@@ -874,10 +874,15 @@ namespace BusinessLayer.Services
                     });
                 }
 
-                // Single batch insert instead of N individual inserts
-                await _chunkRepo.AddRangeAsync(chunkEntities);
-                await _chunkRepo.SaveAsync();
-                _logger.LogInformation("Saved {ChunkCount} chunks for IndexId={IndexId} (batch insert)", totalChunks, indexRecord.IndexId);
+                // Save chunks to DB in batches of 20 to prevent SQL CommandTimeout
+                const int dbBatchSize = 20;
+                for (int i = 0; i < chunkEntities.Count; i += dbBatchSize)
+                {
+                    var batch = chunkEntities.Skip(i).Take(dbBatchSize).ToList();
+                    await _chunkRepo.AddRangeAsync(batch);
+                    await _chunkRepo.SaveAsync();
+                    _logger.LogInformation("Batch saved {Count}/{Total} chunks for IndexId={IndexId}", Math.Min(i + dbBatchSize, chunkEntities.Count), chunkEntities.Count, indexRecord.IndexId);
+                }
 
                 // Update document status
                 doc.Status = "Indexed";
