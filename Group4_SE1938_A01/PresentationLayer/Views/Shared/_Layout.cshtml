@@ -101,8 +101,13 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" ? "active" : "")" asp-controller="Subscription" asp-action="Index">
-                                        <i class="bi bi-wallet2"></i> Mua gói Token
+                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" asp-controller="Subscription" asp-action="Index">
+                                        <i class="bi bi-cart3"></i> Mua gói Token
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" && ViewContext.RouteData.Values["action"]?.ToString() == "MyHistory" ? "active" : "")" asp-controller="Subscription" asp-action="MyHistory">
+                                        <i class="bi bi-clock-history"></i> Lịch sử mua gói
                                     </a>
                                 </li>
                             }
@@ -114,8 +119,13 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" ? "active" : "")" asp-controller="Subscription" asp-action="Index">
-                                        <i class="bi bi-wallet2"></i> Mua gói Token
+                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" asp-controller="Subscription" asp-action="Index">
+                                        <i class="bi bi-cart3"></i> Mua gói Token
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" && ViewContext.RouteData.Values["action"]?.ToString() == "MyHistory" ? "active" : "")" asp-controller="Subscription" asp-action="MyHistory">
+                                        <i class="bi bi-clock-history"></i> Lịch sử mua gói
                                     </a>
                                 </li>
                             }

@@ -1,23 +1,13 @@
-@model PresentationLayer.Models.UserSubscriptionViewModel
+@model IEnumerable<BusinessLayer.DTOs.SubscriptionPackageDto>
 @{
-    ViewData["Title"] = "Gói Token & Lịch sử Giao dịch";
-    
-    // Tính toán hạn mức free còn lại
-    var freeRemaining = Math.Max(0, Model.User.WeeklyTokenLimit - Model.WeeklyUsedTokens);
-    double freeUsagePct = 0;
-    if (Model.User.WeeklyTokenLimit > 0)
-    {
-        freeUsagePct = Math.Min(100.0, Math.Round((double)Model.WeeklyUsedTokens / Model.User.WeeklyTokenLimit * 100.0, 1));
-    }
-    
-    bool hasActivePaidTokens = Model.User.PurchasedTokenBalance > 0 && (Model.User.PurchasedTokenExpiry == null || Model.User.PurchasedTokenExpiry > DateTime.UtcNow);
+    ViewData["Title"] = "Mua gói Token";
 }
 
-<div class="container py-4">
+<div class="container py-5">
     <div class="text-center mb-5">
-        <h2 class="text-white fw-bold"><i class="bi bi-wallet2 text-warning me-2"></i> Gói Dịch Vụ & Lịch Sử Giao Dịch</h2>
-        <p class="text-muted-custom fs-5">Quản lý hạn mức token, mua thêm gói và xem lịch sử thanh toán của bạn.</p>
-
+        <h2 class="text-white fw-bold"><i class="bi bi-cart-plus text-warning me-2"></i> Mua thêm Gói Token</h2>
+        <p class="text-muted-custom fs-5">Tăng hạn mức Token để chatbot có thể phân tích nhiều tài liệu và hỗ trợ học tập liên tục hơn.</p>
+        
         @if (TempData["Error"] != null)
         {
             <div class="alert alert-danger card-glass border-danger border-opacity-20 text-white mt-4 mx-auto" style="max-width: 600px;">
@@ -26,112 +16,9 @@
         }
     </div>
 
-    <!-- PHẦN 1: DASHBOARD TRẠNG THÁI TOKEN CỦA BẠN -->
-    <div class="row g-4 mb-5">
-        <!-- Card 1: Hạn mức tuần mặc định -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card card-glass h-100 border-white border-opacity-10 shadow-lg p-4">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="avatar-glow bg-primary bg-opacity-20 text-primary" style="width: 45px; height: 45px;">
-                        <i class="bi bi-calendar-event fs-4"></i>
-                    </div>
-                    <div>
-                        <h6 class="text-muted-custom mb-0 small uppercase">Hạn mức Free Tuần</h6>
-                        <span class="text-white fw-bold fs-5">Reset vào thứ hai</span>
-                    </div>
-                </div>
-                <div class="mb-3 pt-2">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted-custom small">Đã dùng: @Model.WeeklyUsedTokens.ToString("N0")</span>
-                        <span class="text-white fw-bold small">@freeUsagePct%</span>
-                    </div>
-                    <div class="progress bg-dark bg-opacity-50" style="height: 8px; border-radius: 4px;">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: @freeUsagePct%;"></div>
-                    </div>
-                </div>
-                <div class="mt-auto pt-2 border-top border-white border-opacity-5 d-flex justify-content-between align-items-center">
-                    <span class="text-muted-custom small">Còn lại tuần này:</span>
-                    <span class="text-white fw-bold">@freeRemaining.ToString("N0") Tokens</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 2: Token mua thêm tích lũy -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card card-glass h-100 border-white border-opacity-10 shadow-lg p-4 position-relative overflow-hidden">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="avatar-glow bg-warning bg-opacity-20 text-warning" style="width: 45px; height: 45px;">
-                        <i class="bi bi-coin fs-4"></i>
-                    </div>
-                    <div>
-                        <h6 class="text-muted-custom mb-0 small uppercase">Token Mua Thêm</h6>
-                        <span class="text-warning fw-bold fs-5">Tích lũy & Không reset</span>
-                    </div>
-                </div>
-                <div class="py-2">
-                    <span class="fs-1 fw-extrabold text-glow-warning text-white">
-                        +@Model.User.PurchasedTokenBalance.ToString("N0")
-                    </span>
-                    <span class="text-muted-custom small"> Tokens còn lại</span>
-                </div>
-                <div class="mt-auto pt-2 border-top border-white border-opacity-5 d-flex justify-content-between align-items-center">
-                    <span class="text-muted-custom small">Trạng thái dùng gói:</span>
-                    @if (hasActivePaidTokens)
-                    {
-                        <span class="badge bg-warning text-dark fw-bold">ĐANG HOẠT ĐỘNG</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary bg-opacity-25 text-muted-custom">CHƯA KÍCH HOẠT</span>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 3: Thời hạn sử dụng -->
-        <div class="col-md-12 col-lg-4">
-            <div class="card card-glass h-100 border-white border-opacity-10 shadow-lg p-4">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="avatar-glow bg-info bg-opacity-20 text-info" style="width: 45px; height: 45px;">
-                        <i class="bi bi-hourglass-split fs-4"></i>
-                    </div>
-                    <div>
-                        <h6 class="text-muted-custom mb-0 small uppercase">Thời hạn dùng gói</h6>
-                        <span class="text-info fw-bold fs-5">Hạn dùng Token mua thêm</span>
-                    </div>
-                </div>
-                <div class="py-2">
-                    @if (Model.User.PurchasedTokenExpiry != null)
-                    {
-                        var isExpired = Model.User.PurchasedTokenExpiry < DateTime.UtcNow;
-                        if (isExpired)
-                        {
-                            <span class="text-danger fw-bold fs-4"><i class="bi bi-calendar-x me-1"></i> Đã hết hạn</span>
-                            <div class="text-muted-custom small mt-1">Đã hết hạn vào @Model.User.PurchasedTokenExpiry.Value.ToString("dd/MM/yyyy HH:mm")</div>
-                        }
-                        else
-                        {
-                            <span class="text-success fw-bold fs-4"><i class="bi bi-calendar-check me-1"></i> Còn hạn dùng</span>
-                            <div class="text-muted-custom small mt-1">Hết hạn vào @Model.User.PurchasedTokenExpiry.Value.ToString("dd/MM/yyyy HH:mm")</div>
-                        }
-                    }
-                    else
-                    {
-                        <span class="text-white fw-semibold fs-5">Chưa có giao dịch</span>
-                        <div class="text-muted-custom small mt-1">Hãy mua một gói token để kích hoạt tính năng tích lũy.</div>
-                    }
-                </div>
-                <div class="mt-auto pt-2 border-top border-white border-opacity-5 small text-muted-custom">
-                    <i class="bi bi-info-circle me-1"></i> Token mua thêm chỉ bị trừ sau khi đã dùng hết hạn mức Free tuần.
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- PHẦN 2: DANH SÁCH GÓI ĐỂ MUA -->
-    <h4 class="text-white fw-bold mb-4"><i class="bi bi-cart3 text-primary me-2"></i> Mua thêm gói Token mới</h4>
-    <div class="row g-4 justify-content-center mb-5">
-        @foreach (var p in Model.Packages.OrderBy(x => x.Price))
+    <!-- Danh sách gói -->
+    <div class="row g-4 justify-content-center">
+        @foreach (var p in Model.OrderBy(x => x.Price))
         {
             var cardColor = p.Price switch
             {
@@ -142,6 +29,7 @@
 
             <div class="col-lg-4 col-md-6">
                 <div class="card card-glass h-100 border-white border-opacity-10 shadow-lg position-relative overflow-hidden transition-all hover-translate-y">
+                    <!-- Glow Line -->
                     <div style="height: 5px; background: @cardColor;"></div>
                     
                     @if (p.Price > 50000)
@@ -158,21 +46,25 @@
                         </div>
 
                         <div class="my-auto">
+                            <!-- Token amount banner -->
                             <div class="py-3 px-2 rounded mb-4" style="background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.08);">
                                 <div class="text-muted-custom small uppercase tracking-wider mb-1">Cộng thêm</div>
-                                <div class="fs-2 fw-bold font-monospace" style="color: @cardColor;">+@p.ExtraTokenAmount.ToString("N0")</div>
+                                <div class="fs-2 fw-bold text-glow font-monospace" style="color: @cardColor;">+@p.ExtraTokenAmount.ToString("N0")</div>
                                 <div class="text-muted-custom small">Tokens sử dụng</div>
                             </div>
 
                             <ul class="list-unstyled text-start mb-4 text-white border-top border-white border-opacity-5 pt-4">
                                 <li class="mb-3 d-flex align-items-center gap-2">
-                                    <i class="bi bi-patch-check-fill text-success"></i> Token tích lũy không reset tuần
+                                    <i class="bi bi-patch-check-fill text-success"></i> Token cộng dồn, không bị reset tuần
                                 </li>
                                 <li class="mb-3 d-flex align-items-center gap-2">
                                     <i class="bi bi-patch-check-fill text-success"></i> Tự động trừ khi dùng hết hạn mức free
                                 </li>
+                                <li class="mb-3 d-flex align-items-center gap-2">
+                                    <i class="bi bi-patch-check-fill text-success"></i> Hỗ trợ mọi mô hình AI trong hệ thống
+                                </li>
                                 <li class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-patch-check-fill text-success"></i> Thanh toán an toàn qua MoMo UAT
+                                    <i class="bi bi-patch-check-fill text-success"></i> Thanh toán an toàn qua cổng MoMo
                                 </li>
                             </ul>
                         </div>
@@ -188,62 +80,6 @@
                 </div>
             </div>
         }
-    </div>
-
-    <!-- PHẦN 3: LỊCH SỬ GIAO DỊCH CÁ NHÂN -->
-    <h4 class="text-white fw-bold mb-4"><i class="bi bi-clock-history text-success me-2"></i> Lịch sử giao dịch mua gói</h4>
-    <div class="card card-glass border-white border-opacity-10 shadow-lg overflow-hidden mb-5">
-        <div class="table-responsive">
-            <table class="table table-hover table-custom mb-0 align-middle">
-                <thead>
-                    <tr>
-                        <th>Mã đơn hàng (ID)</th>
-                        <th>Gói dịch vụ</th>
-                        <th>Số tiền</th>
-                        <th>Cổng thanh toán</th>
-                        <th>Trạng thái</th>
-                        <th>Thời gian mua (UTC)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (!Model.PersonalTransactions.Any())
-                    {
-                        <tr>
-                            <td colspan="6" class="text-center py-4 text-muted-custom">Bạn chưa có lịch sử mua gói nào.</td>
-                        </tr>
-                    }
-                    else
-                    {
-                        foreach (var t in Model.PersonalTransactions)
-                        {
-                            var statusBadge = t.TransactionStatus switch
-                            {
-                                "Success" => "bg-success",
-                                "Failed" => "bg-danger",
-                                _ => "bg-warning text-dark"
-                            };
-
-                            <tr>
-                                <td class="text-muted-custom font-monospace small">@t.TransactionId</td>
-                                <td>
-                                    <span class="text-white fw-bold">@t.PackageName</span>
-                                </td>
-                                <td>
-                                    <span class="text-warning fw-bold">@t.Amount.ToString("N0") VND</span>
-                                </td>
-                                <td class="text-white">@t.PaymentGateway</td>
-                                <td>
-                                    <span class="badge @statusBadge">@t.TransactionStatus</span>
-                                </td>
-                                <td class="text-muted-custom small">
-                                    @t.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
     </div>
 </div>
 
@@ -266,28 +102,7 @@
     .border-opacity-5 {
         border-color: rgba(255,255,255,0.05) !important;
     }
-    .text-glow-warning {
-        text-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
-    }
-    .table-custom {
-        background: transparent !important;
-    }
-    .table-custom th {
-        background: rgba(255,255,255,0.03) !important;
-        color: rgba(255,255,255,0.6) !important;
-        border-bottom: 1px solid rgba(255,255,255,0.1) !important;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 0.05em;
-        padding: 15px;
-    }
-    .table-custom td {
-        background: transparent !important;
-        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-        padding: 15px;
-    }
-    .table-hover tbody tr:hover td {
-        background: rgba(255,255,255,0.02) !important;
+    .text-glow {
+        text-shadow: 0 0 10px rgba(255,255,255,0.1);
     }
 </style>
