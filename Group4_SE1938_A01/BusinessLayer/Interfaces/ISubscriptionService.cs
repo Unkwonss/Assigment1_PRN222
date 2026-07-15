@@ -19,5 +19,6 @@ namespace BusinessLayer.Interfaces
         Task<bool> DeletePackageAsync(int id);
         Task<IEnumerable<UserTransactionDto>> GetAllTransactionsAsync();
         Task<IEnumerable<UserTransactionDto>> GetTransactionsByUserIdAsync(int userId);
+        Task<SubscriptionStatsDto> GetSubscriptionStatsAsync();
     }
 }

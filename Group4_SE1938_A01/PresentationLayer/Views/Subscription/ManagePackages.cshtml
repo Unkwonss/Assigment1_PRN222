@@ -39,6 +39,11 @@
                 <i class="bi bi-clock-history me-2"></i> Lịch sử Giao dịch mua gói
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link nav-link-tab text-white fw-bold py-3" id="stats-tab" data-bs-toggle="tab" data-bs-target="#statsTabContent" type="button" role="tab" aria-controls="statsTabContent" aria-selected="false">
+                <i class="bi bi-bar-chart-line-fill me-2"></i> Thống kê Doanh số
+            </button>
+        </li>
     </ul>
 
     <div class="tab-content" id="adminSubTabsContent">
@@ -163,8 +168,273 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tab 3: Thống kê Doanh số -->
+        <div class="tab-pane fade" id="statsTabContent" role="tabpanel" aria-labelledby="stats-tab">
+            <!-- KPI Cards -->
+            <div class="row g-4 mb-4">
+                <!-- Thẻ 1: Tổng Doanh thu -->
+                <div class="col-md-6 col-lg-3">
+                    <div class="card card-glass p-4 border-white border-opacity-10 shadow-lg">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted-custom small uppercase">Doanh thu tổng</span>
+                            <div class="avatar-glow bg-success bg-opacity-25 text-success" style="width: 35px; height: 35px;">
+                                <i class="bi bi-currency-dollar"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-white fw-bold mb-0">@Model.Stats.TotalRevenue.ToString("N0") <span class="small text-muted-custom" style="font-size: 0.8rem;">VND</span></h3>
+                        <div class="text-success small mt-1"><i class="bi bi-arrow-up-circle"></i> Từ giao dịch thành công</div>
+                    </div>
+                </div>
+
+                <!-- Thẻ 2: Tỉ lệ Thành công -->
+                @{
+                    int totalCount = Model.Stats.SuccessTransactionsCount + Model.Stats.FailedTransactionsCount + Model.Stats.PendingTransactionsCount;
+                    double successRate = totalCount > 0 ? (double)Model.Stats.SuccessTransactionsCount / totalCount * 100.0 : 0.0;
+                }
+                <div class="col-md-6 col-lg-3">
+                    <div class="card card-glass p-4 border-white border-opacity-10 shadow-lg">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted-custom small uppercase">Tỷ lệ thanh toán thành công</span>
+                            <div class="avatar-glow bg-primary bg-opacity-25 text-primary" style="width: 35px; height: 35px;">
+                                <i class="bi bi-patch-check"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-white fw-bold mb-0">@successRate.ToString("F1")%</h3>
+                        <div class="text-muted-custom small mt-1">Tổng cộng @totalCount giao dịch</div>
+                    </div>
+                </div>
+
+                <!-- Thẻ 3: Giao dịch thành công -->
+                <div class="col-md-6 col-lg-3">
+                    <div class="card card-glass p-4 border-white border-opacity-10 shadow-lg">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted-custom small uppercase">Giao dịch thành công</span>
+                            <div class="avatar-glow bg-info bg-opacity-25 text-info" style="width: 35px; height: 35px;">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-white fw-bold mb-0">@Model.Stats.SuccessTransactionsCount <span class="small text-muted-custom" style="font-size: 0.8rem;">lượt</span></h3>
+                        <div class="text-info small mt-1">Đã cộng token tài khoản</div>
+                    </div>
+                </div>
+
+                <!-- Thẻ 4: Giao dịch lỗi/chờ xử lý -->
+                <div class="col-md-6 col-lg-3">
+                    <div class="card card-glass p-4 border-white border-opacity-10 shadow-lg">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted-custom small uppercase">Giao dịch thất bại / Chờ xử lý</span>
+                            <div class="avatar-glow bg-warning bg-opacity-25 text-warning" style="width: 35px; height: 35px;">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-white fw-bold mb-0">
+                            @Model.Stats.FailedTransactionsCount 
+                            <span class="fs-6 text-muted-custom">lỗi</span> / 
+                            @Model.Stats.PendingTransactionsCount 
+                            <span class="fs-6 text-muted-custom">chờ</span>
+                        </h3>
+                        <div class="text-warning small mt-1">Thanh toán hủy hoặc đang kết nối</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row g-4 mb-4">
+                <!-- Biểu đồ doanh thu 30 ngày qua -->
+                <div class="col-lg-8">
+                    <div class="card card-glass p-4 border-white border-opacity-10 shadow-lg">
+                        <h5 class="text-white fw-bold mb-3"><i class="bi bi-activity text-primary me-2"></i> Doanh thu trong 30 ngày qua</h5>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="revenueTimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tỉ lệ bán theo từng Gói -->
+                <div class="col-lg-4">
+                    <div class="card card-glass p-4 border-white border-opacity-10 shadow-lg">
+                        <h5 class="text-white fw-bold mb-3"><i class="bi bi-pie-chart text-warning me-2"></i> Phân phối doanh thu gói</h5>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="revenuePackageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng xếp hạng bán các gói -->
+            <div class="card card-glass border-white border-opacity-10 shadow-lg mb-4">
+                <div class="card-header border-bottom border-white border-opacity-10 bg-white bg-opacity-5 py-3">
+                    <h5 class="text-white fw-bold mb-0"><i class="bi bi-list-ol text-success me-2"></i> Hiệu suất bán hàng theo từng gói</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-custom mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Tên gói</th>
+                                <th>Số lượng đã bán</th>
+                                <th>Tổng doanh thu mang lại</th>
+                                <th>Tỉ trọng doanh thu</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.Stats.RevenueByPackage.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted-custom">Chưa có giao dịch thành công nào.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var item in Model.Stats.RevenueByPackage.OrderByDescending(x => x.Value))
+                                {
+                                    int sales = Model.Stats.SalesCountByPackage.ContainsKey(item.Key) ? Model.Stats.SalesCountByPackage[item.Key] : 0;
+                                    double pct = (double)item.Value / (double)(Model.Stats.TotalRevenue > 0 ? Model.Stats.TotalRevenue : 1) * 100.0;
+                                    <tr>
+                                        <td>
+                                            <span class="text-white fw-bold">@item.Key</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary fs-6">@sales lượt</span>
+                                        </td>
+                                        <td>
+                                            <span class="text-warning fw-bold">@item.Value.ToString("N0") VND</span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress flex-grow-1 bg-dark bg-opacity-50" style="height: 6px; width: 100px;">
+                                                    <div class="progress-bar bg-success" style="width: @pct%;"></div>
+                                                </div>
+                                                <span class="text-white small">@pct.ToString("F1")%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Scripts vẽ biểu đồ (Chart.js) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // --- 1. Biểu đồ Doanh thu theo Thời gian ---
+        const timeCtx = document.getElementById('revenueTimeChart').getContext('2d');
+        
+        // Dữ liệu từ Model C# đưa vào JS
+        const timeLabels = [];
+        const timeData = [];
+        
+        @foreach (var entry in Model.Stats.RevenueOverTime)
+        {
+            <text>
+                timeLabels.push('@entry.Key');
+                timeData.push(@entry.Value);
+            </text>
+        }
+
+        new Chart(timeCtx, {
+            type: 'line',
+            data: {
+                labels: timeLabels.length > 0 ? timeLabels : ["Chưa có dữ liệu"],
+                datasets: [{
+                    label: 'Doanh thu (VND)',
+                    data: timeData.length > 0 ? timeData : [0],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#3b82f6',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            callback: function(value) {
+                                return value.toLocaleString() + ' đ';
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.6)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // --- 2. Biểu đồ Tỷ trọng Doanh thu theo Gói ---
+        const packageCtx = document.getElementById('revenuePackageChart').getContext('2d');
+        
+        const packageLabels = [];
+        const packageData = [];
+        
+        @foreach (var entry in Model.Stats.RevenueByPackage)
+        {
+            <text>
+                packageLabels.push('@entry.Key');
+                packageData.push(@entry.Value);
+            </text>
+        }
+
+        new Chart(packageCtx, {
+            type: 'doughnut',
+            data: {
+                labels: packageLabels.length > 0 ? packageLabels : ["Chưa bán được gói nào"],
+                datasets: [{
+                    data: packageData.length > 0 ? packageData : [1],
+                    backgroundColor: [
+                        '#3b82f6',
+                        '#8b5cf6',
+                        '#fbbf24',
+                        '#ec4899',
+                        '#10b981'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            padding: 15,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
 
 <!-- Modal Form Thêm/Sửa Gói -->
 <div class="modal fade" id="packageModal" tabindex="-1" aria-labelledby="packageModalLabel" aria-hidden="true">

@@ -276,5 +276,61 @@ namespace BusinessLayer.Services
                 PackageName = t.Package?.PackageName ?? "Gói đã xóa"
             }).OrderByDescending(t => t.CreatedAt).ToList();
         }
+
+        public async Task<SubscriptionStatsDto> GetSubscriptionStatsAsync()
+        {
+            var transactions = await _transactionRepo.GetAllNoTrackingAsync(includeProperties: "Package");
+            var stats = new SubscriptionStatsDto();
+
+            if (!transactions.Any()) return stats;
+
+            // 1. Phân loại theo Trạng thái
+            stats.SuccessTransactionsCount = transactions.Count(t => t.TransactionStatus == "Success");
+            stats.FailedTransactionsCount = transactions.Count(t => t.TransactionStatus == "Failed");
+            stats.PendingTransactionsCount = transactions.Count(t => t.TransactionStatus == "Pending");
+
+            // 2. Tính Tổng Doanh Thu (chỉ từ giao dịch Success)
+            stats.TotalRevenue = transactions
+                .Where(t => t.TransactionStatus == "Success")
+                .Sum(t => t.Amount);
+
+            // 3. Doanh thu và Số lượng bán theo từng Gói
+            var successTransactions = transactions.Where(t => t.TransactionStatus == "Success").ToList();
+            
+            var revenueMap = new Dictionary<string, decimal>();
+            var salesMap = new Dictionary<string, int>();
+
+            foreach (var t in successTransactions)
+            {
+                string packageName = t.Package?.PackageName ?? "Gói đã xóa";
+                
+                if (!revenueMap.ContainsKey(packageName)) revenueMap[packageName] = 0;
+                revenueMap[packageName] += t.Amount;
+
+                if (!salesMap.ContainsKey(packageName)) salesMap[packageName] = 0;
+                salesMap[packageName]++;
+            }
+
+            stats.RevenueByPackage = revenueMap;
+            stats.SalesCountByPackage = salesMap;
+
+            // 4. Doanh thu theo thời gian (Group theo ngày trong 30 ngày qua)
+            var expiryLimit = DateTime.UtcNow.AddDays(-30);
+            var last30DaysTransactions = successTransactions
+                .Where(t => t.CreatedAt >= expiryLimit)
+                .OrderBy(t => t.CreatedAt)
+                .ToList();
+
+            var timeMap = new Dictionary<string, decimal>();
+            foreach (var t in last30DaysTransactions)
+            {
+                string dateStr = t.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy");
+                if (!timeMap.ContainsKey(dateStr)) timeMap[dateStr] = 0;
+                timeMap[dateStr] += t.Amount;
+            }
+            stats.RevenueOverTime = timeMap;
+
+            return stats;
+        }
     }
 }

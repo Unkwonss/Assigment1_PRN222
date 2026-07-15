@@ -247,11 +247,13 @@ namespace PresentationLayer.Controllers
         {
             var packages = await _subscriptionService.GetAllPackagesAsync();
             var transactions = await _subscriptionService.GetAllTransactionsAsync();
+            var stats = await _subscriptionService.GetSubscriptionStatsAsync();
 
             var viewModel = new Models.ManagePackagesViewModel
             {
                 Packages = packages,
-                Transactions = transactions
+                Transactions = transactions,
+                Stats = stats
             };
 
             return View(viewModel);
