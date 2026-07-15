@@ -321,7 +321,7 @@ namespace BusinessLayer.Services
         #region Subjects
         public async Task<IEnumerable<SubjectDto>> GetAllSubjectsAsync()
         {
-            var subjects = await _subjectRepo.GetAllAsync(
+            var subjects = await _subjectRepo.GetAllNoTrackingAsync(
                 orderBy: q => q.OrderBy(s => s.SubjectCode),
                 includeProperties: "SubjectTeachers.User"
             );
@@ -486,7 +486,7 @@ namespace BusinessLayer.Services
 
         public async Task<IEnumerable<DocumentDto>> GetDocumentsByChapterIdAsync(int chapterId)
         {
-            var docs = await _documentRepo.GetAllAsync(
+            var docs = await _documentRepo.GetAllNoTrackingAsync(
                 filter: d => d.ChapterId == chapterId && d.Status != "Deleted",
                 includeProperties: "UploadedByNavigation"
             );
@@ -495,7 +495,7 @@ namespace BusinessLayer.Services
 
         public async Task<IEnumerable<DocumentDto>> GetIndexedDocumentsAsync(int subjectId)
         {
-            var docs = await _documentRepo.GetAllAsync(
+            var docs = await _documentRepo.GetAllNoTrackingAsync(
                 filter: d => d.Chapter.SubjectId == subjectId && d.Status == "Indexed",
                 includeProperties: "Chapter"
             );
@@ -504,7 +504,7 @@ namespace BusinessLayer.Services
 
         public async Task<string> GetEmbeddingStatusAsync(int documentId)
         {
-            var chunks = (await _chunkRepo.GetAllAsync(
+            var chunks = (await _chunkRepo.GetAllNoTrackingAsync(
                 filter: c => c.Index.DocumentId == documentId,
                 includeProperties: "Index"))
                 .ToList();
@@ -685,39 +685,69 @@ namespace BusinessLayer.Services
                     _logger.LogWarning("Zero chunks generated for DocumentId={DocumentId}. Created fallback warning chunk.", documentId);
                 }
 
-                // Insert DocumentChunks
-                int order = 1;
-                foreach (var chunkText in chunks)
+                // ── OPTIMIZED: Parallel embedding + batch DB insert ──
+                var validChunks = chunks.Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
+                int totalChunks = validChunks.Count;
+                _logger.LogInformation("Starting parallel embedding for {Count} chunks, DocumentId={DocumentId}", totalChunks, documentId);
+
+                // Parallel embedding with controlled concurrency (max 3 concurrent API calls)
+                var semaphore = new System.Threading.SemaphoreSlim(3);
+                var embeddingTasks = new Task<(int Order, string Text, float[] Embedding)>[totalChunks];
+
+                for (int i = 0; i < totalChunks; i++)
                 {
-                    if (string.IsNullOrWhiteSpace(chunkText)) continue;
-
-                    var embedding = await GenerateEmbeddingWithFallbackAsync(embeddingModel, chunkText, documentId, order);
-
-                    // Keep vector key deterministic and short enough for DB constraints.
-                    string vectorKey = $"vec_{indexRecord.IndexId}_{order}";
-                    
-                    var chunk = new DocumentChunk
+                    int chunkOrder = i + 1;
+                    string chunkText = validChunks[i];
+                    embeddingTasks[i] = Task.Run(async () =>
                     {
-                        IndexId = indexRecord.IndexId,
-                        ChunkOrder = order,
-                        Content = chunkText,
-                        PageNumber = (order / 3) + 1, // Simulated page number mapping
-                        TokenCount = (int)(chunkText.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length * 1.3), // Word-based token estimation (~1.3 tokens per word for Vietnamese)
-                        VectorStoreKey = vectorKey,
-                        EmbeddingVector = embedding.Length > 0 ? SerializeVector(embedding) : null,
-                        HasEmbedding = embedding.Length > 0
-                    };
-
-                    await _chunkRepo.AddAsync(chunk);
-                    order++;
+                        await semaphore.WaitAsync();
+                        try
+                        {
+                            var emb = await GenerateEmbeddingWithFallbackAsync(embeddingModel, chunkText, documentId, chunkOrder);
+                            return (chunkOrder, chunkText, emb);
+                        }
+                        finally
+                        {
+                            semaphore.Release();
+                        }
+                    });
                 }
 
+                var embeddingResults = await Task.WhenAll(embeddingTasks);
+
+                // Batch create all DocumentChunk entities
+                var chunkEntities = new List<DocumentChunk>(totalChunks);
+                foreach (var result in embeddingResults.OrderBy(r => r.Order))
+                {
+                    string vectorKey = $"vec_{indexRecord.IndexId}_{result.Order}";
+                    // Fast word count: count spaces instead of Split (avoids allocating string arrays)
+                    int wordCount = 1;
+                    for (int ci = 0; ci < result.Text.Length; ci++)
+                    {
+                        char ch = result.Text[ci];
+                        if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') wordCount++;
+                    }
+                    chunkEntities.Add(new DocumentChunk
+                    {
+                        IndexId = indexRecord.IndexId,
+                        ChunkOrder = result.Order,
+                        Content = result.Text,
+                        PageNumber = (result.Order / 3) + 1,
+                        TokenCount = (int)(wordCount * 1.3),
+                        VectorStoreKey = vectorKey,
+                        EmbeddingVector = result.Embedding.Length > 0 ? SerializeVector(result.Embedding) : null,
+                        HasEmbedding = result.Embedding.Length > 0
+                    });
+                }
+
+                // Single batch insert instead of N individual inserts
+                await _chunkRepo.AddRangeAsync(chunkEntities);
                 await _chunkRepo.SaveAsync();
-                _logger.LogInformation("Saved {ChunkCount} chunks for IndexId={IndexId}", order - 1, indexRecord.IndexId);
+                _logger.LogInformation("Saved {ChunkCount} chunks for IndexId={IndexId} (batch insert)", totalChunks, indexRecord.IndexId);
 
                 // Update document status
                 doc.Status = "Indexed";
-                doc.TotalPages = (order / 3) + 1;
+                doc.TotalPages = (totalChunks / 3) + 1;
                 _documentRepo.Update(doc);
                 await _documentRepo.SaveAsync();
                 _logger.LogInformation("Indexing completed successfully for DocumentId={DocumentId}", documentId);
@@ -736,7 +766,7 @@ namespace BusinessLayer.Services
 
         public async Task<IEnumerable<DocumentIndexDto>> GetIndexesByDocumentIdAsync(int documentId)
         {
-            var indexes = await _indexRepo.GetAllAsync(
+            var indexes = await _indexRepo.GetAllNoTrackingAsync(
                 filter: idx => idx.DocumentId == documentId,
                 includeProperties: "Model,Strategy"
             );
@@ -745,7 +775,7 @@ namespace BusinessLayer.Services
 
         public async Task<IEnumerable<DocumentChunkDto>> GetChunksByIndexIdAsync(int indexId)
         {
-            var chunks = await _chunkRepo.GetAllAsync(
+            var chunks = await _chunkRepo.GetAllNoTrackingAsync(
                 filter: c => c.IndexId == indexId,
                 orderBy: q => q.OrderBy(c => c.ChunkOrder)
             );

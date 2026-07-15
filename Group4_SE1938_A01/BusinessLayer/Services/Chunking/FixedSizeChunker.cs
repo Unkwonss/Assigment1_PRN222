@@ -6,6 +6,7 @@ namespace BusinessLayer.Services.Chunking
 {
     /// <summary>
     /// Chunking strategy dựa trên kích thước cố định (số ký tự) với độ chồng lấp (overlap).
+    /// Optimized: pre-allocate list capacity, uses Substring for minimal allocations.
     /// </summary>
     public class FixedSizeChunker : IChunkingStrategy
     {
@@ -25,18 +26,21 @@ namespace BusinessLayer.Services.Chunking
 
         public List<string> Chunk(string fullText)
         {
-            var chunks = new List<string>();
-            if (string.IsNullOrEmpty(fullText)) return chunks;
+            if (string.IsNullOrEmpty(fullText)) return new List<string>();
+
+            int step = _chunkSize - _overlap;
+            // Pre-allocate: estimate number of chunks to avoid list resizing
+            int estimatedCount = (fullText.Length / step) + 1;
+            var chunks = new List<string>(estimatedCount);
 
             int currentIndex = 0;
             while (currentIndex < fullText.Length)
             {
                 int length = Math.Min(_chunkSize, fullText.Length - currentIndex);
-                string chunk = fullText.Substring(currentIndex, length);
-                chunks.Add(chunk);
+                chunks.Add(fullText.Substring(currentIndex, length));
 
                 // Move forward, but go back by overlap
-                currentIndex += _chunkSize - _overlap;
+                currentIndex += step;
             }
 
             return chunks;

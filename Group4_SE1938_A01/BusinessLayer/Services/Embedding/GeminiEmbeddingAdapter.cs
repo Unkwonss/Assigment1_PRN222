@@ -60,13 +60,23 @@ namespace BusinessLayer.Services.Embedding
 
         public async Task<List<float[]>> GetEmbeddingsAsync(List<string> texts)
         {
-            var results = new List<float[]>();
-            foreach (var text in texts)
+            // Parallel batch processing with concurrency control
+            var semaphore = new System.Threading.SemaphoreSlim(5);
+            var tasks = texts.Select(async text =>
             {
-                results.Add(await GetEmbeddingAsync(text));
-                await Task.Delay(200); // rate-limit guard
-            }
-            return results;
+                await semaphore.WaitAsync();
+                try
+                {
+                    return await GetEmbeddingAsync(text);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }).ToArray();
+
+            var results = await Task.WhenAll(tasks);
+            return results.ToList();
         }
     }
 }
