@@ -37,8 +37,31 @@ namespace PresentationLayer.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+            {
+                return Challenge();
+            }
+
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user == null) return NotFound("Người dùng không tồn tại.");
+
+            // Lấy lượng token đã dùng trong tuần
+            var usageMap = await _userService.GetWeeklyTokenUsageMapAsync(new List<int> { userId });
+            int weeklyUsed = usageMap.ContainsKey(userId) ? usageMap[userId] : 0;
+
             var packages = await _subscriptionService.GetAllPackagesAsync();
-            return View(packages);
+            var personalTx = await _subscriptionService.GetTransactionsByUserIdAsync(userId);
+
+            var viewModel = new Models.UserSubscriptionViewModel
+            {
+                User = user,
+                WeeklyUsedTokens = weeklyUsed,
+                Packages = packages,
+                PersonalTransactions = personalTx
+            };
+
+            return View(viewModel);
         }
 
         [HttpPost]

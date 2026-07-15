@@ -257,5 +257,24 @@ namespace BusinessLayer.Services
                 PackageName = t.Package?.PackageName ?? "Gói đã xóa"
             }).OrderByDescending(t => t.CreatedAt).ToList();
         }
+
+        public async Task<IEnumerable<UserTransactionDto>> GetTransactionsByUserIdAsync(int userId)
+        {
+            var transactions = await _transactionRepo.GetAllNoTrackingAsync(
+                filter: t => t.UserId == userId,
+                includeProperties: "Package"
+            );
+            return transactions.Select(t => new UserTransactionDto
+            {
+                TransactionId = t.TransactionId,
+                UserId = t.UserId,
+                PackageId = t.PackageId,
+                Amount = t.Amount,
+                PaymentGateway = t.PaymentGateway,
+                TransactionStatus = t.TransactionStatus,
+                CreatedAt = t.CreatedAt,
+                PackageName = t.Package?.PackageName ?? "Gói đã xóa"
+            }).OrderByDescending(t => t.CreatedAt).ToList();
+        }
     }
 }
