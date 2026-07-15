@@ -64,7 +64,11 @@ namespace PresentationLayer.Controllers
                 var transaction = await _subscriptionService.CreateTransactionAsync(userId, packageId);
 
                 // 2. Gọi MoMo API để lấy link thanh toán
-                string orderInfo = $"Mua {package.PackageName} - {package.ExtraTokenAmount:N0} Tokens";
+                string cleanPackageName = package.PackageName
+                    .Replace("Gói Tuần Học Tập", "Goi Tuan Hoc Tap")
+                    .Replace("Gói Tháng Đột Phá", "Goi Thang Dot Pha")
+                    .Replace("Gói Siêu Cấp VIP", "Goi Sieu Cap VIP");
+                string orderInfo = $"Mua {cleanPackageName} - {package.ExtraTokenAmount} Tokens";
                 var (success, payUrl, message) = await _momoService.CreatePaymentUrlAsync(
                     transaction.TransactionId.ToString(),
                     orderInfo,
