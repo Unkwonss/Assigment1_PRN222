@@ -163,7 +163,9 @@ namespace PresentationLayer.Controllers
                 Username = s.Username,
                 Role = s.Role,
                 WeeklyTokenLimit = s.WeeklyTokenLimit,
-                WeeklyTokenUsed = weeklyUsage.ContainsKey(s.UserId) ? weeklyUsage[s.UserId] : 0
+                WeeklyTokenUsed = weeklyUsage.ContainsKey(s.UserId) ? weeklyUsage[s.UserId] : 0,
+                PurchasedTokenBalance = s.PurchasedTokenBalance,
+                PurchasedTokenExpiry = s.PurchasedTokenExpiry
             }).ToList();
 
             ViewBag.SearchTerm = searchTerm;

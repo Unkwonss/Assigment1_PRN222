@@ -11,6 +11,8 @@ namespace PresentationLayer.Models
         public string Role { get; set; } = null!;
         public int WeeklyTokenLimit { get; set; }
         public int WeeklyTokenUsed { get; set; }
+        public int PurchasedTokenBalance { get; set; }
+        public DateTime? PurchasedTokenExpiry { get; set; }
         
         public int RemainingTokens => Math.Max(0, WeeklyTokenLimit - WeeklyTokenUsed);
         

@@ -96,8 +96,10 @@
                         <th>Họ và tên / Email</th>
                         <th>Vai trò</th>
                         <th>Hạn mức / Tuần</th>
-                        <th style="width: 250px;">Đã sử dụng</th>
-                        <th>Còn lại</th>
+                        <th style="width: 200px;">Đã sử dụng</th>
+                        <th>Còn lại (Free)</th>
+                        <th>Token mua thêm</th>
+                        <th>Hạn dùng gói</th>
                         <th>Trạng thái</th>
                         <th class="text-end" style="width: 150px;">Thao tác</th>
                     </tr>
@@ -106,7 +108,7 @@
                     @if (!Model.Any())
                     {
                         <tr>
-                            <td colspan="8" class="text-center py-5">
+                            <td colspan="11" class="text-center py-5">
                                 <i class="bi bi-lightning-charge fs-1 text-muted-custom d-block mb-2"></i>
                                 <span class="text-muted-custom">Không tìm thấy người dùng nào trong hệ thống.</span>
                             </td>
@@ -134,6 +136,9 @@
                                 statusText = "Cảnh báo";
                             }
 
+                            // Nếu có token mua và chưa hết hạn, trạng thái có thêm nhãn VIP
+                            bool hasActivePaidTokens = user.PurchasedTokenBalance > 0 && (user.PurchasedTokenExpiry == null || user.PurchasedTokenExpiry > DateTime.UtcNow);
+
                             <tr>
                                 <td><strong class="text-muted-custom">#@user.UserId</strong></td>
                                 <td>
@@ -142,7 +147,13 @@
                                             @(string.IsNullOrEmpty(user.FullName) ? "?" : user.FullName[0].ToString().ToUpper())
                                         </div>
                                         <div>
-                                            <span class="fw-semibold text-white d-block">@user.FullName</span>
+                                            <span class="fw-semibold text-white d-block">
+                                                @user.FullName
+                                                @if (hasActivePaidTokens)
+                                                {
+                                                    <span class="badge bg-warning text-dark small ms-1" style="font-size: 0.65rem; padding: 2px 4px;">PRO</span>
+                                                }
+                                            </span>
                                             <small class="text-muted-custom" style="font-size: 0.75rem;">@user.Email</small>
                                         </div>
                                     </div>
@@ -173,6 +184,29 @@
                                 </td>
                                 <td class="text-white">@user.RemainingTokens.ToString("N0")</td>
                                 <td>
+                                    @if (user.PurchasedTokenBalance > 0)
+                                    {
+                                        <span class="text-warning fw-bold font-monospace">+@user.PurchasedTokenBalance.ToString("N0")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted-custom">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (user.PurchasedTokenExpiry != null)
+                                    {
+                                        var isExpired = user.PurchasedTokenExpiry < DateTime.UtcNow;
+                                        <span class="@(isExpired ? "text-danger text-decoration-line-through" : "text-success") small">
+                                            @user.PurchasedTokenExpiry.Value.ToString("dd/MM/yyyy HH:mm")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted-custom small">Không sử dụng</span>
+                                    }
+                                </td>
+                                <td>
                                     <span class="badge @badgeClass px-2 py-1">@statusText</span>
                                 </td>
                                 <td class="text-end">
@@ -182,7 +216,7 @@
                                             data-limit="@user.WeeklyTokenLimit"
                                             data-bs-toggle="modal" 
                                             data-bs-target="#editLimitModal">
-                                        <i class="bi bi-pencil-square"></i> Sửa hạn mức
+                                        <i class="bi bi-pencil-square"></i> Sửa
                                     </button>
                                 </td>
                             </tr>
