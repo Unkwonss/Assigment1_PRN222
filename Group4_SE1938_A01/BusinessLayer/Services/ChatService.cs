@@ -492,7 +492,7 @@ namespace BusinessLayer.Services
             var questionVector = await embeddingProvider.GetEmbeddingAsync(question);
             bool useVectorSearch = questionVector.Length > 0;
 
-            var matchingChunks = (await _chunkRepo.GetAllAsync(
+            var matchingChunks = (await _chunkRepo.GetAllNoTrackingAsync(
                 filter: c => c.Index.Document.Chapter.SubjectId == subjectId &&
                              c.Index.Document.Status == "Indexed" &&
                              c.Index.ModelId == embeddingModelId &&
@@ -510,7 +510,7 @@ namespace BusinessLayer.Services
 
             if (!matchingChunks.Any())
             {
-                matchingChunks = (await _chunkRepo.GetAllAsync(
+                matchingChunks = (await _chunkRepo.GetAllNoTrackingAsync(
                     filter: c => c.Index.Document.Chapter.SubjectId == subjectId &&
                                  c.Index.Document.Status == "Indexed" &&
                                  c.Index.ModelId == embeddingModelId &&
@@ -526,7 +526,7 @@ namespace BusinessLayer.Services
 
             if (!matchingChunks.Any())
             {
-                matchingChunks = (await _chunkRepo.GetAllAsync(
+                matchingChunks = (await _chunkRepo.GetAllNoTrackingAsync(
                     filter: c => c.Index.Document.Chapter.SubjectId == subjectId &&
                                  c.Index.Document.Status == "Indexed" &&
                                  c.Content != null &&
@@ -607,7 +607,11 @@ namespace BusinessLayer.Services
                 .ToList();
 
             return chunks
-                .Select(c => (Chunk: c, Score: (float)keywords.Count(k => c.Content.ToLower().Contains(k))))
+                .Select(c =>
+                {
+                    var lowerContent = c.Content.ToLower();
+                    return (Chunk: c, Score: (float)keywords.Count(k => lowerContent.Contains(k)));
+                })
                 .Where(x => x.Score > 0f)
                 .OrderByDescending(x => x.Score)
                 .Take(topK)

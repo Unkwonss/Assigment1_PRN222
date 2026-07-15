@@ -55,17 +55,23 @@ namespace BusinessLayer.Services.Embedding
 
         public async Task<List<float[]>> GetEmbeddingsAsync(List<string> texts)
         {
-            // Ollama current API (/api/embeddings) only supports one prompt at a time.
-            // We need to call it iteratively or concurrently.
-            var results = new List<float[]>();
-            
-            // To be safe with local resources, we process sequentially, but can easily be parallelized
-            foreach(var text in texts)
+            // Parallel processing with concurrency control for local Ollama
+            var semaphore = new System.Threading.SemaphoreSlim(3);
+            var tasks = texts.Select(async text =>
             {
-                results.Add(await GetEmbeddingAsync(text));
-            }
-            
-            return results;
+                await semaphore.WaitAsync();
+                try
+                {
+                    return await GetEmbeddingAsync(text);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }).ToArray();
+
+            var results = await Task.WhenAll(tasks);
+            return results.ToList();
         }
     }
 }

@@ -13,6 +13,14 @@ namespace DataAccessLayer.Repository
             Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
             string includeProperties = "");
 
+        /// <summary>
+        /// Same as GetAllAsync but uses AsNoTracking for read-only queries (better performance).
+        /// </summary>
+        Task<IEnumerable<T>> GetAllNoTrackingAsync(
+            Expression<Func<T, bool>>? filter = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+            string includeProperties = "");
+
         Task<T?> GetByIdAsync(object id);
         
         Task<T?> GetFirstOrDefaultAsync(
@@ -20,6 +28,8 @@ namespace DataAccessLayer.Repository
             string includeProperties = "");
 
         Task AddAsync(T entity);
+
+        Task AddRangeAsync(IEnumerable<T> entities);
 
         void Update(T entity);
 

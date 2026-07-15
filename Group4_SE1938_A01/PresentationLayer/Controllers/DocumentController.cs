@@ -387,15 +387,17 @@ namespace PresentationLayer.Controllers
                 return Json(new { success = false, message = "Chỉ chấp nhận các tệp định dạng .txt, .pdf, .docx, .pptx." });
             }
 
-            // Calculate FileHash (SHA256)
+            // ── OPTIMIZED: Buffer file once, reuse for hash + extraction ──
+            using var fileBuffer = new MemoryStream();
+            await file.CopyToAsync(fileBuffer);
+            fileBuffer.Position = 0;
+
+            // Calculate FileHash (SHA256) from buffer
             string fileHash = "";
             using (var sha256 = System.Security.Cryptography.SHA256.Create())
             {
-                using (var stream = file.OpenReadStream())
-                {
-                    var hashBytes = sha256.ComputeHash(stream);
-                    fileHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-                }
+                var hashBytes = await sha256.ComputeHashAsync(fileBuffer);
+                fileHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
             }
 
             var chapter = await _documentService.GetChapterByIdAsync(chapterId);
@@ -407,26 +409,27 @@ namespace PresentationLayer.Controllers
                 return Json(new { success = false, message = "Tài liệu này đã tồn tại trong môn học, vui lòng không tải lên lại!" });
             }
 
-            // Extract content
+            // Extract content from the same buffered stream (no second file read)
+            fileBuffer.Position = 0;
             string textContent = "";
             if (ext == ".txt")
             {
-                using (var reader = new StreamReader(file.OpenReadStream(), Encoding.UTF8))
+                using (var reader = new StreamReader(fileBuffer, Encoding.UTF8, leaveOpen: true))
                 {
                     textContent = await reader.ReadToEndAsync();
                 }
             }
             else if (ext == ".pdf")
             {
-                textContent = ExtractTextFromPdf(file.OpenReadStream());
+                textContent = ExtractTextFromPdf(fileBuffer);
             }
             else if (ext == ".docx")
             {
-                textContent = ExtractTextFromDocx(file.OpenReadStream());
+                textContent = ExtractTextFromDocx(fileBuffer);
             }
             else if (ext == ".pptx")
             {
-                textContent = ExtractTextFromPptx(file.OpenReadStream(), file.FileName);
+                textContent = ExtractTextFromPptx(fileBuffer, file.FileName);
             }
             else
             {
