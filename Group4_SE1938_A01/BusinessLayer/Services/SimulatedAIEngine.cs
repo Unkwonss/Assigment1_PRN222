@@ -71,7 +71,7 @@ namespace BusinessLayer.Services
         {
             // Try to call real APIs if configured (Gemini/Ollama)
             string? realResponse = CallRealAIIfNeededAsync(userQuery, contexts, subjectCode).GetAwaiter().GetResult();
-            if (!string.IsNullOrEmpty(realResponse))
+            if (!string.IsNullOrEmpty(realResponse) && !realResponse.StartsWith("[Lỗi"))
             {
                 return realResponse;
             }

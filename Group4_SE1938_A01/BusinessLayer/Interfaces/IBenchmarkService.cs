@@ -27,5 +27,6 @@ namespace BusinessLayer.Interfaces
         Task<IEnumerable<BenchmarkResultDto>> RunBenchmarkAsync(int experimentId, int subjectId);
         Task<IEnumerable<BenchmarkResultDto>> GetResultsByExperimentIdAsync(int experimentId);
         Task<IEnumerable<BenchmarkResultDto>> GetAllResultsAsync();
+        Task<DashboardStatsDto> GetDashboardStatsAsync();
     }
 }

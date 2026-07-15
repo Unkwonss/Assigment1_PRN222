@@ -19,6 +19,10 @@ namespace BusinessLayer.Services
         private readonly IGenericRepository<Document> _documentRepo;
         private readonly IGenericRepository<DocumentIndex> _indexRepo;
         private readonly IGenericRepository<DocumentChunk> _chunkRepo;
+        private readonly IGenericRepository<ChatHistory> _chatHistoryRepo;
+        private readonly IGenericRepository<ChatCitation> _chatCitationRepo;
+        private readonly IGenericRepository<Subject> _subjectRepo;
+        private readonly IGenericRepository<User> _userRepo;
         private readonly SimulatedAIEngine _aiEngine;
 
         public BenchmarkService(
@@ -29,6 +33,10 @@ namespace BusinessLayer.Services
             IGenericRepository<Document> documentRepo,
             IGenericRepository<DocumentIndex> indexRepo,
             IGenericRepository<DocumentChunk> chunkRepo,
+            IGenericRepository<ChatHistory> chatHistoryRepo,
+            IGenericRepository<ChatCitation> chatCitationRepo,
+            IGenericRepository<Subject> subjectRepo,
+            IGenericRepository<User> userRepo,
             SimulatedAIEngine aiEngine)
         {
             _experimentRepo = experimentRepo;
@@ -38,6 +46,10 @@ namespace BusinessLayer.Services
             _documentRepo = documentRepo;
             _indexRepo = indexRepo;
             _chunkRepo = chunkRepo;
+            _chatHistoryRepo = chatHistoryRepo;
+            _chatCitationRepo = chatCitationRepo;
+            _subjectRepo = subjectRepo;
+            _userRepo = userRepo;
             _aiEngine = aiEngine;
         }
 
@@ -294,7 +306,7 @@ namespace BusinessLayer.Services
         #region Running Benchmarks
         public async Task<IEnumerable<BenchmarkResultDto>> RunBenchmarkAsync(int experimentId, int subjectId)
         {
-            var experiment = await _experimentRepo.GetFirstOrDefaultAsync(e => e.ExperimentId == experimentId, "Aimodel");
+            var experiment = await _experimentRepo.GetFirstOrDefaultAsync(e => e.ExperimentId == experimentId, "Aimodel,EmbeddingModel,Strategy");
             if (experiment == null) throw new ArgumentException("Thử nghiệm không tồn tại.");
 
             var testSets = await _testSetRepo.GetAllAsync(t => t.SubjectId == subjectId);
@@ -452,6 +464,168 @@ namespace BusinessLayer.Services
                 includeProperties: "Question,Experiment,Experiment.Aimodel"
             );
             return results.Select(r => MapResultToDto(r)!).ToList();
+        }
+
+        public async Task<DashboardStatsDto> GetDashboardStatsAsync()
+        {
+            var stats = new DashboardStatsDto();
+
+            // 1. Thống kê token theo tài khoản (UserTokenStatsDto)
+            var historiesForTokens = await _chatHistoryRepo.GetAllAsync(
+                includeProperties: "Session,Session.User"
+            );
+            stats.TokenStats = historiesForTokens
+                .Where(h => h.Session != null && h.Session.User != null)
+                .GroupBy(h => new { h.Session.User.UserId, h.Session.User.FullName, h.Session.User.Email })
+                .Select(g => new UserTokenStatsDto
+                {
+                    UserId = g.Key.UserId,
+                    FullName = g.Key.FullName,
+                    Email = g.Key.Email,
+                    TotalTokensIn = g.Sum(h => h.TokensIn ?? 0),
+                    TotalTokensOut = g.Sum(h => h.TokensOut ?? 0),
+                    MessageCount = g.Count()
+                })
+                .OrderByDescending(x => x.TotalTokens)
+                .ToList();
+
+            // 2. So sánh hiệu năng AI Models (ModelComparisonDto)
+            var resultsForModel = await _resultRepo.GetAllAsync(
+                includeProperties: "Experiment,Experiment.Aimodel"
+            );
+            stats.ModelComparison = resultsForModel
+                .Where(r => r.Experiment != null && r.Experiment.Aimodel != null)
+                .GroupBy(r => r.Experiment.Aimodel.ModelName)
+                .Select(g => new ModelComparisonDto
+                {
+                    ModelName = g.Key ?? "Unknown Model",
+                    AvgPrecision = g.Average(r => r.ContextPrecisionScore ?? 0.0),
+                    AvgRecall = g.Average(r => r.ContextRecallScore ?? 0.0),
+                    AvgMRR = g.Average(r => r.FaithfulnessScore ?? 0.0),
+                    AvgLatency = g.Average(r => r.LatencyMilliseconds),
+                    TestCount = g.Count()
+                })
+                .ToList();
+
+            // 3. Top Cited Documents (TopDocumentDto)
+            var citations = await _chatCitationRepo.GetAllAsync(
+                includeProperties: "Chunk,Chunk.Index,Chunk.Index.Document"
+            );
+            stats.TopDocs = citations
+                .Where(c => c.Chunk != null && c.Chunk.Index != null && c.Chunk.Index.Document != null)
+                .GroupBy(c => new { c.Chunk.Index.Document.Title, c.Chunk.Index.Document.FileName })
+                .Select(g => new TopDocumentDto
+                {
+                    Title = g.Key.Title ?? "Untitled",
+                    FileName = g.Key.FileName ?? "Unknown File",
+                    CitationCount = g.Count()
+                })
+                .OrderByDescending(x => x.CitationCount)
+                .Take(10)
+                .ToList();
+
+            // 4. Daily Token Allocation over time (last 30 days) (TokenOverTimeDto)
+            var startDate = DateTime.UtcNow.AddDays(-30);
+            var historiesOverTime = await _chatHistoryRepo.GetAllAsync(
+                filter: h => h.Timestamp != null && h.Timestamp >= startDate
+            );
+            stats.TokenOverTime = historiesOverTime
+                .GroupBy(h => h.Timestamp!.Value.Date)
+                .Select(g => new TokenOverTimeDto
+                {
+                    DateStr = g.Key.ToString("dd/MM"),
+                    PromptTokens = g.Sum(h => h.TokensIn ?? 0),
+                    CompletionTokens = g.Sum(h => h.TokensOut ?? 0)
+                })
+                .OrderBy(x => x.DateStr)
+                .ToList();
+
+            // 5. Hourly Activity by Hour of Day (0-23) (HourlyActivityDto)
+            var historiesHourly = await _chatHistoryRepo.GetAllAsync(
+                filter: h => h.Timestamp != null
+            );
+            stats.HourlyActivity = historiesHourly
+                .GroupBy(h => h.Timestamp!.Value.Hour)
+                .Select(g => new HourlyActivityDto
+                {
+                    Hour = g.Key,
+                    Count = g.Count()
+                })
+                .OrderBy(x => x.Hour)
+                .ToList();
+
+            // 6. Word Cloud (WordFrequencyDto)
+            var messages = historiesHourly.Select(h => h.UserMessage).ToList();
+            var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+                "và", "là", "của", "cho", "tôi", "em", "với", "trong", "có", "không", "gì", "này", "cái", "để", "làm", "sao", "thế", "nào", "được", "bị", "đi", "ra", "vào", "lên", "xuống", "đã", "đang", "sẽ", "nhé", "nha", "ạ", "ơi", "thầy", "cô", "bài", "môn", "học", "hỏi", "giúp", "về", "cách", "hướng", "dẫn", "như", "câu", "tài", "liệu", "giáo", "trình", "bản", "bản vẽ", "thông", "tin", "cho tôi", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín", "mười", "nếu", "thì", "khi",
+                "the", "to", "and", "a", "an", "is", "of", "in", "for", "on", "with", "at", "by", "from", "how", "what", "why", "who", "where", "which"
+            };
+
+            stats.WordFrequencies = messages
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .SelectMany(m => m!.ToLower().Split(new[] { ' ', '.', ',', '?', '!', ';', ':', '-', '(', ')', '[', ']', '{', '}', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                .Where(w => w.Length > 1 && !stopWords.Contains(w) && !int.TryParse(w, out _))
+                .GroupBy(w => w)
+                .Select(g => new WordFrequencyDto { Word = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count)
+                .Take(25)
+                .ToList();
+
+            // 7. So sánh Chunking Strategy (StrategyComparisonDto)
+            var resultsForStrategy = await _resultRepo.GetAllAsync(
+                includeProperties: "Experiment,Experiment.Strategy"
+            );
+            stats.StrategyComparison = resultsForStrategy
+                .Where(r => r.Experiment != null && r.Experiment.Strategy != null)
+                .GroupBy(r => r.Experiment.Strategy!.StrategyName)
+                .Select(g => new StrategyComparisonDto
+                {
+                    StrategyName  = g.Key ?? "Default Strategy",
+                    AvgPrecision  = g.Average(r => r.ContextPrecisionScore ?? 0.0),
+                    AvgRecall     = g.Average(r => r.ContextRecallScore ?? 0.0),
+                    AvgMRR        = g.Average(r => r.FaithfulnessScore ?? 0.0),
+                    AvgLatency    = g.Average(r => r.LatencyMilliseconds),
+                    TestCount     = g.Count()
+                })
+                .ToList();
+
+            // 8. Token trung bình theo môn học (SubjectTokenStatsDto)
+            var historiesForSubjects = await _chatHistoryRepo.GetAllAsync(
+                includeProperties: "Session,Session.Subject"
+            );
+            stats.SubjectTokenStats = historiesForSubjects
+                .Where(h => h.Session != null && h.Session.Subject != null)
+                .GroupBy(h => new { h.Session.Subject.SubjectCode, h.Session.Subject.SubjectName })
+                .Select(g => new SubjectTokenStatsDto
+                {
+                    SubjectCode    = g.Key.SubjectCode,
+                    SubjectName    = g.Key.SubjectName,
+                    TotalMessages  = g.Count(),
+                    TotalTokens    = g.Sum(h => (h.TokensIn ?? 0) + (h.TokensOut ?? 0))
+                })
+                .OrderByDescending(x => x.TotalTokens)
+                .ToList();
+
+            // 9. Số tài liệu và chunk theo môn học (SubjectDocStatsDto)
+            var subjects = await _subjectRepo.GetAllAsync(
+                includeProperties: "Chapters,Chapters.Documents,Chapters.Documents.DocumentIndices,Chapters.Documents.DocumentIndices.DocumentChunks"
+            );
+            stats.SubjectDocStats = subjects
+                .Select(s => new SubjectDocStatsDto
+                {
+                    SubjectCode   = s.SubjectCode ?? "Unknown",
+                    SubjectName   = s.SubjectName ?? "Unknown Subject",
+                    DocumentCount = s.Chapters.SelectMany(c => c.Documents).Count(),
+                    IndexedCount  = s.Chapters.SelectMany(c => c.Documents).Count(d => d.Status == "Indexed"),
+                    ChunkCount    = s.Chapters.SelectMany(c => c.Documents)
+                                              .SelectMany(d => d.DocumentIndices)
+                                              .SelectMany(idx => idx.DocumentChunks)
+                                              .Count()
+                })
+                .OrderByDescending(x => x.ChunkCount)
+                .ToList();
+
+            return stats;
         }
         #endregion
     }

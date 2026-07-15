@@ -23,6 +23,7 @@ namespace BusinessLayer.Services
         private readonly IGenericRepository<DocumentChunk> _chunkRepo;
         private readonly IGenericRepository<Subject> _subjectRepo;
         private readonly IGenericRepository<EmbeddingModel> _modelRepo;
+        private readonly IGenericRepository<User> _userRepo;
         private readonly SimulatedAIEngine _aiEngine;
         private readonly IGeminiService _geminiService;
         private readonly IGeminiEmbeddingService _embeddingService;
@@ -38,6 +39,7 @@ namespace BusinessLayer.Services
             IGenericRepository<DocumentChunk> chunkRepo,
             IGenericRepository<Subject> subjectRepo,
             IGenericRepository<EmbeddingModel> modelRepo,
+            IGenericRepository<User> userRepo,
             SimulatedAIEngine aiEngine,
             IGeminiService geminiService,
             IGeminiEmbeddingService embeddingService,
@@ -52,6 +54,7 @@ namespace BusinessLayer.Services
             _chunkRepo        = chunkRepo;
             _subjectRepo      = subjectRepo;
             _modelRepo        = modelRepo;
+            _userRepo         = userRepo;
             _aiEngine         = aiEngine;
             _geminiService    = geminiService;
             _embeddingService = embeddingService;
@@ -246,6 +249,40 @@ namespace BusinessLayer.Services
         {
             var session = await _sessionRepo.GetFirstOrDefaultAsync(s => s.SessionId == sessionId, "Subject");
             if (session == null) throw new ArgumentException("Phiên trò chuyện không tồn tại.");
+
+            // Check Weekly Token Limit
+            var user = await _userRepo.GetByIdAsync(session.UserId);
+            if (user != null && (user.Role == "Student" || user.Role == "Teacher")) // Restrict both student and teacher limits
+            {
+                DateTime now = DateTime.UtcNow;
+                int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
+                DateTime startOfWeek = now.AddDays(-1 * diff).Date;
+
+                var weeklyUsedTokens = await _historyRepo.GetAllAsync(
+                    filter: h => h.Session.UserId == session.UserId && h.Timestamp >= startOfWeek,
+                    includeProperties: "Session"
+                );
+                int totalWeeklyUsed = weeklyUsedTokens.Sum(h => (h.TokensIn ?? 0) + (h.TokensOut ?? 0));
+
+                if (totalWeeklyUsed >= user.WeeklyTokenLimit)
+                {
+                    string limitMessage = $"⚠️ **Hạn mức sử dụng hàng tuần của bạn đã hết!**\n\n- Đã dùng: **{totalWeeklyUsed:N0}** / **{user.WeeklyTokenLimit:N0}** tokens.\n- Vui lòng liên hệ Giảng viên hoặc Quản trị viên để được tăng thêm hạn mức.";
+                    var limitHistory = new ChatHistory
+                    {
+                        SessionId = sessionId,
+                        UserMessage = userMessage,
+                        StandaloneQuery = userMessage,
+                        BotResponse = limitMessage,
+                        Timestamp = DateTime.UtcNow,
+                        TokensIn = 0,
+                        TokensOut = 0,
+                        LatencyMs = 0
+                    };
+                    await _historyRepo.AddAsync(limitHistory);
+                    await _historyRepo.SaveAsync();
+                    return (MapHistoryToDto(limitHistory)!, new List<(ChatCitationDto, float)>());
+                }
+            }
 
             string subjectCode = session.Subject?.SubjectCode ?? "PRN222";
             int subjectId = session.SubjectId;
@@ -581,6 +618,24 @@ namespace BusinessLayer.Services
         {
             if (string.IsNullOrEmpty(json)) return Array.Empty<float>();
             return JsonSerializer.Deserialize<float[]>(json) ?? Array.Empty<float>();
+        }
+
+        public async Task<int> GetWeeklyTokenUsageBySessionAsync(Guid sessionId)
+        {
+            var session = await _sessionRepo.GetByIdAsync(sessionId);
+            if (session == null) return 0;
+
+            int userId = session.UserId;
+            DateTime now = DateTime.UtcNow;
+            int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
+            DateTime startOfWeek = now.AddDays(-1 * diff).Date;
+
+            var weeklyHistory = await _historyRepo.GetAllAsync(
+                filter: h => h.Session != null && h.Session.UserId == userId && h.Timestamp >= startOfWeek,
+                includeProperties: "Session"
+            );
+
+            return weeklyHistory.Sum(h => (h.TokensIn ?? 0) + (h.TokensOut ?? 0));
         }
     }
 }

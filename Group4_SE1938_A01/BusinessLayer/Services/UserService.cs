@@ -16,6 +16,9 @@ namespace BusinessLayer.Services
     {
         private readonly IGenericRepository<User> _userRepository;
         private readonly IGenericRepository<ChatSession> _chatSessionRepository;
+        private readonly IGenericRepository<SubjectTeacher> _subjectTeacherRepository;
+        private readonly IGenericRepository<Document> _documentRepository;
+        private readonly IGenericRepository<ChatHistory> _chatHistoryRepository;
         private readonly EmailService _emailService;
         private readonly IConfiguration _configuration;
         private string DefaultPassword => _configuration["DefaultStudentPassword"] ?? "fpt12345";
@@ -23,11 +26,17 @@ namespace BusinessLayer.Services
         public UserService(
             IGenericRepository<User> userRepository,
             IGenericRepository<ChatSession> chatSessionRepository,
+            IGenericRepository<SubjectTeacher> subjectTeacherRepository,
+            IGenericRepository<Document> documentRepository,
+            IGenericRepository<ChatHistory> chatHistoryRepository,
             EmailService emailService,
             IConfiguration configuration)
         {
             _userRepository = userRepository;
             _chatSessionRepository = chatSessionRepository;
+            _subjectTeacherRepository = subjectTeacherRepository;
+            _documentRepository = documentRepository;
+            _chatHistoryRepository = chatHistoryRepository;
             _emailService = emailService;
             _configuration = configuration;
         }
@@ -169,7 +178,8 @@ namespace BusinessLayer.Services
                 PasswordHash = user.PasswordHash,
                 FullName = user.FullName,
                 Email = user.Email,
-                Role = user.Role
+                Role = user.Role,
+                WeeklyTokenLimit = user.WeeklyTokenLimit
             };
         }
 
@@ -183,7 +193,8 @@ namespace BusinessLayer.Services
                 PasswordHash = dto.PasswordHash,
                 FullName = dto.FullName,
                 Email = dto.Email,
-                Role = dto.Role
+                Role = dto.Role,
+                WeeklyTokenLimit = dto.WeeklyTokenLimit
             };
         }
 
@@ -302,6 +313,7 @@ namespace BusinessLayer.Services
                 existingUser.Email = userDto.Email;
                 existingUser.Role = userDto.Role;
                 existingUser.Username = userDto.Username;
+                existingUser.WeeklyTokenLimit = userDto.WeeklyTokenLimit;
 
                 if (!string.IsNullOrEmpty(userDto.PasswordHash) && userDto.PasswordHash != existingUser.PasswordHash)
                 {
@@ -324,7 +336,32 @@ namespace BusinessLayer.Services
         {
             if (userId != 0)
             {
-                // Xóa các ChatSession liên quan trước để tránh FK constraint violation
+                // 1. Re-assign documents uploaded by this user to the first Admin user
+                var docs = await _documentRepository.GetAllAsync(d => d.UploadedBy == userId);
+                if (docs.Any())
+                {
+                    var admins = await _userRepository.GetAllAsync(u => u.Role == "Admin");
+                    var adminId = admins.FirstOrDefault()?.UserId ?? 0;
+                    if (adminId != 0)
+                    {
+                        foreach (var doc in docs)
+                        {
+                            doc.UploadedBy = adminId;
+                            _documentRepository.Update(doc);
+                        }
+                        await _documentRepository.SaveAsync();
+                    }
+                }
+
+                // 2. Delete assigned subjects from SubjectTeachers
+                var subjectTeachers = await _subjectTeacherRepository.GetAllAsync(st => st.UserId == userId);
+                foreach (var st in subjectTeachers)
+                {
+                    _subjectTeacherRepository.Delete(st);
+                }
+                await _subjectTeacherRepository.SaveAsync();
+
+                // 3. Xóa các ChatSession liên quan trước để tránh FK constraint violation
                 var sessions = await _chatSessionRepository.GetAllAsync(s => s.UserId == userId);
                 foreach (var session in sessions)
                 {
@@ -332,7 +369,7 @@ namespace BusinessLayer.Services
                 }
                 await _chatSessionRepository.SaveAsync();
 
-                // Sau đó xóa User
+                // 4. Sau đó xóa User
                 await _userRepository.DeleteByIdAsync(userId);
                 await _userRepository.SaveAsync();
             }
@@ -351,6 +388,29 @@ namespace BusinessLayer.Services
                 }
                 return builder.ToString();
             }
+        }
+
+        public async Task<Dictionary<int, int>> GetWeeklyTokenUsageMapAsync(List<int> userIds)
+        {
+            if (userIds == null || userIds.Count == 0)
+                return new Dictionary<int, int>();
+
+            DateTime now = DateTime.UtcNow;
+            int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
+            DateTime startOfWeek = now.AddDays(-1 * diff).Date;
+
+            // Truy vấn qua repository, load kèm Session để so khớp UserId
+            var weeklyUsage = await _chatHistoryRepository.GetAllAsync(
+                filter: h => h.Timestamp >= startOfWeek && h.Session != null && userIds.Contains(h.Session.UserId),
+                includeProperties: "Session"
+            );
+
+            return weeklyUsage
+                .GroupBy(h => h.Session.UserId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(h => (h.TokensIn ?? 0) + (h.TokensOut ?? 0))
+                );
         }
     }
 }

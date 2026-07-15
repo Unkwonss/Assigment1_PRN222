@@ -332,6 +332,8 @@ public partial class Prn222AssigmentContext : DbContext
                 .HasMaxLength(20)
                 .HasDefaultValue("Student");
             entity.Property(e => e.Username).HasMaxLength(50);
+            entity.Property(e => e.WeeklyTokenLimit)
+                .HasDefaultValue(250000);
         });
 
         OnModelCreatingPartial(modelBuilder);

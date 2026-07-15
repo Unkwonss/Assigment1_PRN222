@@ -87,17 +87,20 @@ namespace BusinessLayer.Services
             var sb = new StringBuilder();
 
             sb.AppendLine("Bạn là trợ lý học tập cho môn " + (string.IsNullOrEmpty(subject) ? "học" : subject) + ".");
-            sb.AppendLine("Nhiệm vụ: Đọc kỹ TÀI LIỆU THAM KHẢO bên dưới (được đánh dấu là --- Đoạn 1 ---, --- Đoạn 2 ---,...), sau đó trả lời câu hỏi của sinh viên dựa trên nội dung tài liệu đó.");
-            sb.AppendLine("HƯỚNG DẪN TRÍCH DẪN NGUỒN:");
-            sb.AppendLine("1. Bạn PHẢI trích dẫn nguồn ngay giữa câu trả lời (inline citation) tại những câu cụ thể mà bạn lấy thông tin từ tài liệu.");
-            sb.AppendLine("2. Hãy sử dụng đúng ký hiệu [Nguồn X] trong đó X là số thứ tự của Đoạn văn bản chứa thông tin đó. Ví dụ: '[Nguồn 1]', '[Nguồn 2]'. Nếu thông tin từ nhiều đoạn, hãy ghi: '[Nguồn 1, Nguồn 2]'.");
-            sb.AppendLine("3. Ví dụ cách trả lời: 'Theo tài liệu [Nguồn 1], từ vựng bài 1 gồm... nhưng ngữ pháp lại ở bài 2 [Nguồn 2].'");
-            sb.AppendLine("4. CHỈ khi tài liệu hoàn toàn KHÔNG chứa bất kỳ thông tin nào liên quan đến câu hỏi, hãy trả lời: 'Tài liệu chưa đề cập nội dung này.'");
-            sb.AppendLine("Trả lời bằng tiếng Việt, rõ ràng, có cấu trúc.");
-            sb.AppendLine();
 
             if (chunks != null && chunks.Count > 0)
             {
+                sb.AppendLine("Nhiệm vụ: Đọc kỹ TÀI LIỆU THAM KHẢO bên dưới (được đánh dấu là --- Đoạn 1 ---, --- Đoạn 2 ---,...), sau đó trả lời câu hỏi của sinh viên dựa trên nội dung tài liệu đó.");
+                sb.AppendLine("HƯỚNG DẪN TRÍCH DẪN NGUỒN:");
+                sb.AppendLine("1. Bạn PHẢI trích dẫn nguồn ngay giữa câu trả lời (inline citation) tại những câu cụ thể mà bạn lấy thông tin từ tài liệu.");
+                sb.AppendLine("2. Hãy sử dụng đúng ký hiệu [Nguồn X] trong đó X là số thứ tự của Đoạn văn bản chứa thông tin đó. Ví dụ: '[Nguồn 1]', '[Nguồn 2]'. Nếu thông tin từ nhiều đoạn, hãy ghi: '[Nguồn 1, Nguồn 2]'.");
+                sb.AppendLine("3. Ví dụ cách trả lời: 'Theo tài liệu [Nguồn 1], từ vựng bài 1 gồm... nhưng ngữ pháp lại ở bài 2 [Nguồn 2].'");
+                sb.AppendLine("4. CHỈ khi tài liệu hoàn toàn KHÔNG chứa bất kỳ thông tin nào liên quan đến câu hỏi, hãy trả lời: 'Tài liệu chưa đề cập nội dung này.'");
+                sb.AppendLine("5. QUAN TRỌNG: Hãy diễn đạt lại (paraphrase) bằng ngôn từ tự nhiên của bạn, KHÔNG SAO CHÉP NGUYÊN VĂN các câu dài từ tài liệu tham khảo để tránh kích hoạt bộ lọc bản quyền (recitation filter) của hệ thống gây ngắt quãng câu trả lời.");
+                sb.AppendLine("6. Hãy trả lời thật đầy đủ, chi tiết, phân tích rõ ràng và viết trọn vẹn câu trả lời. Không dừng câu dở dang.");
+                sb.AppendLine("Trả lời bằng tiếng Việt, rõ ràng, có cấu trúc.");
+                sb.AppendLine();
+
                 sb.AppendLine("=== TÀI LIỆU THAM KHẢO ===");
                 for (int i = 0; i < chunks.Count; i++)
                 {
@@ -110,8 +113,9 @@ namespace BusinessLayer.Services
             }
             else
             {
-                _logger.LogWarning("[RAG] BuildRAGPrompt: chunkContents RỖNG! Đây là nguyên nhân AI từ chối.");
-                sb.AppendLine("Chưa có tài liệu được cung cấp.");
+                _logger.LogWarning("[RAG] BuildRAGPrompt: chunkContents RỖNG! Đây là chế độ trả lời tham khảo.");
+                sb.AppendLine("Nhiệm vụ: Không tìm thấy tài liệu tham khảo nào liên quan trực tiếp trong giáo trình môn học này. Hãy sử dụng kiến thức chuyên môn rộng rãi của bạn về môn " + (string.IsNullOrEmpty(subject) ? "học" : subject) + " để trả lời chi tiết, chính xác và đầy đủ nhất có thể câu hỏi của sinh viên.");
+                sb.AppendLine("Trả lời bằng tiếng Việt, rõ ràng, phân tích sâu sắc.");
                 sb.AppendLine();
             }
 
@@ -127,7 +131,7 @@ namespace BusinessLayer.Services
             }
 
             sb.AppendLine($"Sinh viên hỏi: {question}");
-            sb.AppendLine("Hãy trả lời dựa trên tài liệu ở trên:");
+            sb.AppendLine("Hãy trả lời:");
 
             return sb.ToString();
         }
@@ -163,6 +167,13 @@ namespace BusinessLayer.Services
                     maxOutputTokens = _settings.MaxOutputTokens,
                     topP = 0.8,
                     topK = 40
+                },
+                safetySettings = new[]
+                {
+                    new { category = "HARM_CATEGORY_HARASSMENT", threshold = "BLOCK_NONE" },
+                    new { category = "HARM_CATEGORY_HATE_SPEECH", threshold = "BLOCK_NONE" },
+                    new { category = "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold = "BLOCK_NONE" },
+                    new { category = "HARM_CATEGORY_DANGEROUS_CONTENT", threshold = "BLOCK_NONE" }
                 }
             };
 

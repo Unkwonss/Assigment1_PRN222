@@ -8,5 +8,6 @@ namespace BusinessLayer.DTOs
         public string FullName { get; set; } = null!;
         public string Email { get; set; } = null!;
         public string Role { get; set; } = null!;
+        public int WeeklyTokenLimit { get; set; } = 250000;
     }
 }

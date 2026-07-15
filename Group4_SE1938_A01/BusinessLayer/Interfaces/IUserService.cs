@@ -18,5 +18,6 @@ namespace BusinessLayer.Interfaces
         Task<int> ImportStudentsFromCsvAsync(System.IO.Stream fileStream);
         Task<bool> ChangePasswordAsync(int userId, string oldPassword, string newPassword);
         Task<bool> IsDefaultPasswordAsync(int userId);
+        Task<Dictionary<int, int>> GetWeeklyTokenUsageMapAsync(List<int> userIds);
     }
 }
