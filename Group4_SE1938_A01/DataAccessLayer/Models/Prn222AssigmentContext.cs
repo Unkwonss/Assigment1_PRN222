@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using DataAccessLayer.Models;
 
 namespace Domain.Models;
 
@@ -46,6 +47,10 @@ public partial class Prn222AssigmentContext : DbContext
     public virtual DbSet<TestSet> TestSets { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
+
+    public virtual DbSet<SubscriptionPackage> SubscriptionPackages { get; set; }
+
+    public virtual DbSet<UserTransaction> UserTransactions { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -334,6 +339,37 @@ public partial class Prn222AssigmentContext : DbContext
             entity.Property(e => e.Username).HasMaxLength(50);
             entity.Property(e => e.WeeklyTokenLimit)
                 .HasDefaultValue(250000);
+            entity.Property(e => e.PurchasedTokenBalance)
+                .HasDefaultValue(0);
+        });
+
+        modelBuilder.Entity<SubscriptionPackage>(entity =>
+        {
+            entity.HasKey(e => e.PackageId);
+            entity.Property(e => e.PackageName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Price).HasColumnType("decimal(18,2)").IsRequired();
+            entity.Property(e => e.ExtraTokenAmount).IsRequired();
+            entity.Property(e => e.DurationUnit).HasMaxLength(20).HasDefaultValue("Month");
+            entity.Property(e => e.DurationValue).HasDefaultValue(1);
+        });
+
+        modelBuilder.Entity<UserTransaction>(entity =>
+        {
+            entity.HasKey(e => e.TransactionId);
+            entity.Property(e => e.Amount).HasColumnType("decimal(18,2)").IsRequired();
+            entity.Property(e => e.PaymentGateway).HasMaxLength(50).HasDefaultValue("MoMo");
+            entity.Property(e => e.TransactionStatus).HasMaxLength(20).HasDefaultValue("Pending");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Package)
+                .WithMany()
+                .HasForeignKey(d => d.PackageId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         OnModelCreatingPartial(modelBuilder);

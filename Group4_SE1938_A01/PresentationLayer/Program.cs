@@ -26,6 +26,10 @@ namespace PresentationLayer
             builder.Services.Configure<GeminiSettings>(
                 builder.Configuration.GetSection("GeminiSettings"));
 
+            // Bind MomoSettings từ config
+            builder.Services.Configure<MomoSettings>(
+                builder.Configuration.GetSection("MomoSettings"));
+
             // Đăng ký HttpClient cho Gemini
             builder.Services.AddHttpClient("GeminiClient", client =>
             {
@@ -58,6 +62,8 @@ namespace PresentationLayer
             builder.Services.AddScoped<IGeminiService, GeminiService>();
             builder.Services.AddScoped<IGeminiEmbeddingService, GeminiEmbeddingService>();
             builder.Services.AddScoped<IBenchmarkService, BenchmarkService>();
+            builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+            builder.Services.AddScoped<IMomoService, MomoService>();
             // Factory chọn đúng embedding provider theo model name
             builder.Services.AddScoped<EmbeddingProviderFactory>();
 
@@ -136,6 +142,11 @@ namespace PresentationLayer
                             }
                         }
                     }
+
+                    // Seed 3 gói mẫu dịch vụ
+                    var subscriptionService = scope.ServiceProvider.GetRequiredService<ISubscriptionService>();
+                    await subscriptionService.SeedDefaultPackagesAsync();
+                    Console.WriteLine("[SEED] Subscription packages seeding checked/completed.");
 
                     // Seed PRN212 (OOP with .NET) — 50 câu hỏi benchmark
                     var prn212Subject = db.Subjects.FirstOrDefault(s => s.SubjectCode == "PRN212");

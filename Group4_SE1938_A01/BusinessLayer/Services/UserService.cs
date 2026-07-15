@@ -179,7 +179,9 @@ namespace BusinessLayer.Services
                 FullName = user.FullName,
                 Email = user.Email,
                 Role = user.Role,
-                WeeklyTokenLimit = user.WeeklyTokenLimit
+                WeeklyTokenLimit = user.WeeklyTokenLimit,
+                PurchasedTokenBalance = user.PurchasedTokenBalance,
+                PurchasedTokenExpiry = user.PurchasedTokenExpiry
             };
         }
 
@@ -194,7 +196,9 @@ namespace BusinessLayer.Services
                 FullName = dto.FullName,
                 Email = dto.Email,
                 Role = dto.Role,
-                WeeklyTokenLimit = dto.WeeklyTokenLimit
+                WeeklyTokenLimit = dto.WeeklyTokenLimit,
+                PurchasedTokenBalance = dto.PurchasedTokenBalance,
+                PurchasedTokenExpiry = dto.PurchasedTokenExpiry
             };
         }
 

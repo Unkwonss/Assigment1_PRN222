@@ -9,5 +9,7 @@ namespace BusinessLayer.DTOs
         public string Email { get; set; } = null!;
         public string Role { get; set; } = null!;
         public int WeeklyTokenLimit { get; set; } = 250000;
+        public int PurchasedTokenBalance { get; set; }
+        public System.DateTime? PurchasedTokenExpiry { get; set; }
     }
 }

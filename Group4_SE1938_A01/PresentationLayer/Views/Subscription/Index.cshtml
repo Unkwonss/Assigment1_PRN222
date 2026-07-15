@@ -1,0 +1,108 @@
+@model IEnumerable<BusinessLayer.DTOs.SubscriptionPackageDto>
+@{
+    ViewData["Title"] = "Mua gói Token tích lũy";
+}
+
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="text-white fw-bold"><i class="bi bi-wallet2 text-warning me-2"></i> Mua thêm Gói Token Tích Lũy</h2>
+        <p class="text-muted-custom fs-5">Tăng hạn mức Token để chatbot có thể phân tích nhiều tài liệu và hỗ trợ học tập liên tục hơn.</p>
+        
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger card-glass border-danger border-opacity-20 text-white mt-4 mx-auto" style="max-width: 600px;">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            </div>
+        }
+    </div>
+
+    <!-- Danh sách gói -->
+    <div class="row g-4 justify-content-center">
+        @foreach (var p in Model.OrderBy(x => x.Price))
+        {
+            var cardColor = p.Price switch
+            {
+                <= 15000 => "#3b82f6", // Blue
+                <= 50000 => "#8b5cf6", // Purple
+                _ => "#fbbf24" // Gold
+            };
+
+            <div class="col-lg-4 col-md-6">
+                <div class="card card-glass h-100 border-white border-opacity-10 shadow-lg position-relative overflow-hidden transition-all hover-translate-y">
+                    <!-- Glow Line -->
+                    <div style="height: 5px; background: @cardColor;"></div>
+                    
+                    @if (p.Price > 50000)
+                    {
+                        <span class="position-absolute top-0 end-0 bg-warning text-dark fw-bold px-3 py-1 rounded-bl small" style="border-radius: 0 0 0 12px; z-index: 10;">Phổ biến</span>
+                    }
+
+                    <div class="card-body p-4 text-center d-flex flex-column">
+                        <h4 class="text-white fw-bold mb-2">@p.PackageName</h4>
+                        <div class="mb-4">
+                            <span class="fs-1 fw-extrabold text-white">@p.Price.ToString("N0")</span>
+                            <span class="text-muted-custom"> VND</span>
+                            <div class="small text-muted-custom mt-1">Hạn sử dụng: @p.DurationValue @(p.DurationUnit.Equals("Week", StringComparison.OrdinalIgnoreCase) ? "Tuần" : "Tháng")</div>
+                        </div>
+
+                        <div class="my-auto">
+                            <!-- Token amount banner -->
+                            <div class="py-3 px-2 rounded mb-4" style="background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.08);">
+                                <div class="text-muted-custom small uppercase tracking-wider mb-1">Cộng thêm</div>
+                                <div class="fs-2 fw-bold text-glow font-monospace" style="color: @cardColor;">+@p.ExtraTokenAmount.ToString("N0")</div>
+                                <div class="text-muted-custom small">Tokens sử dụng</div>
+                            </div>
+
+                            <ul class="list-unstyled text-start mb-4 text-white border-top border-white border-opacity-5 pt-4">
+                                <li class="mb-3 d-flex align-items-center gap-2">
+                                    <i class="bi bi-patch-check-fill text-success"></i> Token cộng dồn, không bị reset tuần
+                                </li>
+                                <li class="mb-3 d-flex align-items-center gap-2">
+                                    <i class="bi bi-patch-check-fill text-success"></i> Tự động trừ khi dùng hết hạn mức free
+                                </li>
+                                <li class="mb-3 d-flex align-items-center gap-2">
+                                    <i class="bi bi-patch-check-fill text-success"></i> Hỗ trợ mọi mô hình AI trong hệ thống
+                                </li>
+                                <li class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-patch-check-fill text-success"></i> Thanh toán an toàn qua cổng MoMo
+                                </li>
+                            </ul>
+                        </div>
+
+                        <form asp-controller="Subscription" asp-action="Buy" method="post" class="mt-auto">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="packageId" value="@p.PackageId" />
+                            <button type="submit" class="btn w-100 py-3 fw-bold btn-custom-pay d-flex align-items-center justify-content-center gap-2" style="background: @cardColor; color: @(p.Price > 50000 && cardColor == "#fbbf24" ? "#1e293b" : "#fff");">
+                                <i class="bi bi-wallet2"></i> Mua ngay qua MoMo
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .btn-custom-pay {
+        border-radius: 10px;
+        transition: all 0.2s ease-in-out;
+        border: none;
+    }
+    .btn-custom-pay:hover {
+        filter: brightness(1.1);
+        transform: scale(1.02);
+    }
+    .hover-translate-y {
+        transition: transform 0.2s ease-in-out;
+    }
+    .hover-translate-y:hover {
+        transform: translateY(-8px);
+    }
+    .border-opacity-5 {
+        border-color: rgba(255,255,255,0.05) !important;
+    }
+    .text-glow {
+        text-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
+</style>

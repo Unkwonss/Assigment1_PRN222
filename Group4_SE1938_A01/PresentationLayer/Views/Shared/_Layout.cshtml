@@ -82,6 +82,11 @@
                                         <i class="bi bi-graph-up-arrow"></i> Thống kê RAG
                                     </a>
                                 </li>
+                                <li class="nav-item">
+                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" ? "active" : "")" asp-controller="Subscription" asp-action="Index">
+                                        <i class="bi bi-wallet2"></i> Mua gói Token
+                                    </a>
+                                </li>
                             }
                             else if (User.IsInRole("Teacher"))
                             {
@@ -95,12 +100,22 @@
                                         <i class="bi bi-chat-left-text-fill"></i> Chatbot RAG
                                     </a>
                                 </li>
+                                <li class="nav-item">
+                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" ? "active" : "")" asp-controller="Subscription" asp-action="Index">
+                                        <i class="bi bi-wallet2"></i> Mua gói Token
+                                    </a>
+                                </li>
                             }
                             else // Student
                             {
                                 <li class="nav-item">
                                     <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Chat" ? "active" : "")" asp-controller="Chat" asp-action="Index">
                                         <i class="bi bi-chat-left-text-fill"></i> Trò chuyện học tập
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" ? "active" : "")" asp-controller="Subscription" asp-action="Index">
+                                        <i class="bi bi-wallet2"></i> Mua gói Token
                                     </a>
                                 </li>
                             }

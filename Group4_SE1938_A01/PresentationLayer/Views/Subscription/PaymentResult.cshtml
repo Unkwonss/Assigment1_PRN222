@@ -1,0 +1,42 @@
+@{
+    ViewData["Title"] = "Kết quả thanh toán";
+    var status = ViewBag.Status as string;
+    var message = ViewBag.Message as string;
+}
+
+<div class="container py-5 text-center">
+    <div class="mx-auto card-glass p-5 border-white border-opacity-10 shadow-2xl rounded-2xl" style="max-width: 600px;">
+        @if (status == "Success")
+        {
+            <div class="mb-4 text-success">
+                <i class="bi bi-check-circle-fill" style="font-size: 5rem;"></i>
+            </div>
+            <h2 class="text-white fw-bold mb-3">Thanh Toán Thành Công!</h2>
+            <p class="text-muted-custom mb-4">@message</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a asp-controller="Chat" asp-action="Index" class="btn btn-primary py-2 px-4">
+                    <i class="bi bi-chat-left-text-fill me-2"></i> Trải nghiệm Chatbot
+                </a>
+                <a asp-controller="Subscription" asp-action="Index" class="btn btn-outline-secondary py-2 px-4">
+                    Xem các gói khác
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="mb-4 text-danger">
+                <i class="bi bi-x-circle-fill" style="font-size: 5rem;"></i>
+            </div>
+            <h2 class="text-white fw-bold mb-3">Thanh Toán Thất Bại</h2>
+            <p class="text-muted-custom mb-4">@message</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a asp-controller="Subscription" asp-action="Index" class="btn btn-danger py-2 px-4">
+                    Thử lại
+                </a>
+                <a asp-controller="Chat" asp-action="Index" class="btn btn-outline-secondary py-2 px-4">
+                    Về Trang Chủ
+                </a>
+            </div>
+        }
+    </div>
+</div>

@@ -19,6 +19,10 @@ public partial class User
 
     public int WeeklyTokenLimit { get; set; } = 250000;
 
+    public int PurchasedTokenBalance { get; set; } = 0;
+
+    public DateTime? PurchasedTokenExpiry { get; set; }
+
     public virtual ICollection<ChatSession> ChatSessions { get; set; } = new List<ChatSession>();
 
     public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
