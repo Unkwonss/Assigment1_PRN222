@@ -14,5 +14,9 @@ namespace BusinessLayer.Interfaces
         Task<bool> UpdateTransactionStatusAsync(Guid transactionId, string status);
         Task<bool> ProcessSuccessfulSubscriptionAsync(Guid transactionId);
         Task SeedDefaultPackagesAsync();
+        Task<SubscriptionPackageDto> CreatePackageAsync(SubscriptionPackageDto dto);
+        Task<bool> UpdatePackageAsync(SubscriptionPackageDto dto);
+        Task<bool> DeletePackageAsync(int id);
+        Task<IEnumerable<UserTransactionDto>> GetAllTransactionsAsync();
     }
 }

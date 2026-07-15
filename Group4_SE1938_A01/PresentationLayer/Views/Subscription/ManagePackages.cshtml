@@ -1,0 +1,274 @@
+@model PresentationLayer.Models.ManagePackagesViewModel
+@{
+    ViewData["Title"] = "Quản lý Gói & Giao dịch Token";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-white border-opacity-10 pb-3">
+        <div>
+            <h2 class="text-white fw-bold"><i class="bi bi-wallet2 text-warning me-2"></i> Quản lý Gói & Giao dịch Token</h2>
+            <p class="text-muted-custom mb-0">Cấu hình các gói token và theo dõi lịch sử thanh toán người dùng.</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="openPackageModal(0, '', 0, 0, 'Month', 1)">
+            <i class="bi bi-plus-circle me-1"></i> Thêm gói mới
+        </button>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success card-glass border-success border-opacity-20 text-white mb-4">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger card-glass border-danger border-opacity-20 text-white mb-4">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+        </div>
+    }
+
+    <!-- Tabs chuyển đổi -->
+    <ul class="nav nav-tabs border-bottom border-white border-opacity-10 mb-4" id="adminSubTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link nav-link-tab active text-white fw-bold py-3" id="packages-tab" data-bs-toggle="tab" data-bs-target="#packages" type="button" role="tab" aria-controls="packages" aria-selected="true">
+                <i class="bi bi-box-seam me-2"></i> Danh sách Gói Token
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link nav-link-tab text-white fw-bold py-3" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions" type="button" role="tab" aria-controls="transactions" aria-selected="false">
+                <i class="bi bi-clock-history me-2"></i> Lịch sử Giao dịch mua gói
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="adminSubTabsContent">
+        <!-- Tab 1: Danh sách các gói -->
+        <div class="tab-pane fade show active" id="packages" role="tabpanel" aria-labelledby="packages-tab">
+            <div class="card card-glass border-white border-opacity-10 shadow-lg">
+                <div class="table-responsive">
+                    <table class="table table-hover table-custom mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Tên gói</th>
+                                <th>Giá tiền</th>
+                                <th>Token cộng thêm</th>
+                                <th>Thời hạn sử dụng</th>
+                                <th class="text-end">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.Packages.Any())
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted-custom">Không có gói nào tồn tại.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var p in Model.Packages)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="text-white fw-bold">@p.PackageName</span>
+                                        </td>
+                                        <td>
+                                            <span class="text-warning fw-bold">@p.Price.ToString("N0") VND</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary fs-6">+@p.ExtraTokenAmount.ToString("N0") Tokens</span>
+                                        </td>
+                                        <td class="text-white">
+                                            @p.DurationValue @(p.DurationUnit.Equals("Week", StringComparison.OrdinalIgnoreCase) ? "Tuần" : "Tháng")
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="d-flex justify-content-end gap-2">
+                                                <button type="button" class="btn btn-sm btn-outline-light" onclick="openPackageModal(@p.PackageId, '@p.PackageName', @p.Price, @p.ExtraTokenAmount, '@p.DurationUnit', @p.DurationValue)">
+                                                    <i class="bi bi-pencil-square"></i> Sửa
+                                                </button>
+                                                <form asp-controller="Subscription" asp-action="DeletePackage" method="post" onsubmit="return confirm('Bạn có chắc chắn muốn xóa gói này? Người dùng sẽ không thể chọn mua gói này nữa.');">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@p.PackageId" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash"></i> Xóa
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Lịch sử giao dịch -->
+        <div class="tab-pane fade" id="transactions" role="tabpanel" aria-labelledby="transactions-tab">
+            <div class="card card-glass border-white border-opacity-10 shadow-lg">
+                <div class="table-responsive">
+                    <table class="table table-hover table-custom mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Khách hàng</th>
+                                <th>Gói đã mua</th>
+                                <th>Số tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Thời gian giao dịch (UTC)</th>
+                                <th>Mã giao dịch (ID)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.Transactions.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted-custom">Không tìm thấy giao dịch nào.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var t in Model.Transactions)
+                                {
+                                    var statusBadge = t.TransactionStatus switch
+                                    {
+                                        "Success" => "bg-success",
+                                        "Failed" => "bg-danger",
+                                        _ => "bg-warning text-dark"
+                                    };
+
+                                    <tr>
+                                        <td>
+                                            <div class="text-white fw-bold">@t.FullName</div>
+                                        </td>
+                                        <td>
+                                            <span class="text-info fw-bold">@t.PackageName</span>
+                                        </td>
+                                        <td>
+                                            <span class="text-white">@t.Amount.ToString("N0") VND</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge @statusBadge">@t.TransactionStatus</span>
+                                        </td>
+                                        <td class="text-muted-custom small">
+                                            @t.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")
+                                        </td>
+                                        <td class="text-muted-custom small font-monospace">
+                                            @t.TransactionId
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Form Thêm/Sửa Gói -->
+<div class="modal fade" id="packageModal" tabindex="-1" aria-labelledby="packageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-glass border-white border-opacity-15 shadow-2xl text-white">
+            <div class="modal-header border-bottom border-white border-opacity-10">
+                <h5 class="modal-title" id="packageModalLabel">Cấu hình gói dịch vụ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-controller="Subscription" asp-action="CreateOrUpdatePackage" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="packageId" name="PackageId" value="0" />
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="packageName" class="form-label">Tên gói dịch vụ</label>
+                        <input type="text" class="form-control bg-dark border-white border-opacity-20 text-white" id="packageName" name="PackageName" required placeholder="Ví dụ: Gói Tháng Học Tập" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="price" class="form-label">Giá tiền (VND)</label>
+                        <input type="number" class="form-control bg-dark border-white border-opacity-20 text-white" id="price" name="Price" required min="1000" placeholder="50000" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="extraTokenAmount" class="form-label">Số lượng Token cấp thêm</label>
+                        <input type="number" class="form-control bg-dark border-white border-opacity-20 text-white" id="extraTokenAmount" name="ExtraTokenAmount" required min="1000" placeholder="200000" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="durationUnit" class="form-label">Đơn vị hạn sử dụng</label>
+                            <select class="form-select bg-dark border-white border-opacity-20 text-white" id="durationUnit" name="DurationUnit">
+                                <option value="Week">Tuần</option>
+                                <option value="Month">Tháng</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="durationValue" class="form-label">Độ dài</label>
+                            <input type="number" class="form-control bg-dark border-white border-opacity-20 text-white" id="durationValue" name="DurationValue" required min="1" value="1" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top border-white border-opacity-10">
+                    <button type="button" class="btn btn-outline-secondary text-white" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu cấu hình</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openPackageModal(id, name, price, tokens, unit, val) {
+        document.getElementById('packageId').value = id;
+        document.getElementById('packageName').value = name;
+        document.getElementById('price').value = price;
+        document.getElementById('extraTokenAmount').value = tokens;
+        document.getElementById('durationUnit').value = unit;
+        document.getElementById('durationValue').value = val;
+
+        document.getElementById('packageModalLabel').innerText = id > 0 ? "Chỉnh sửa gói dịch vụ" : "Thêm gói dịch vụ mới";
+        
+        var modal = new bootstrap.Modal(document.getElementById('packageModal'));
+        modal.show();
+    }
+</script>
+
+<style>
+    .nav-tabs .nav-link-tab {
+        border: none;
+        background: transparent;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    .nav-tabs .nav-link-tab:hover {
+        border-bottom: 2px solid rgba(255,255,255,0.3);
+    }
+    .nav-tabs .nav-link-tab.active {
+        background: transparent !important;
+        border: none;
+        border-bottom: 2px solid #3b82f6 !important;
+        color: #3b82f6 !important;
+    }
+    .table-custom {
+        background: transparent !important;
+    }
+    .table-custom th {
+        background: rgba(255,255,255,0.03) !important;
+        color: rgba(255,255,255,0.6) !important;
+        border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.05em;
+        padding: 15px;
+    }
+    .table-custom td {
+        background: transparent !important;
+        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+        padding: 15px;
+    }
+    .table-hover tbody tr:hover td {
+        background: rgba(255,255,255,0.02) !important;
+    }
+</style>

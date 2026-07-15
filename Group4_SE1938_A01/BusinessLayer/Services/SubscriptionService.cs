@@ -196,5 +196,66 @@ namespace BusinessLayer.Services
                 await _packageRepo.SaveAsync();
             }
         }
+
+        public async Task<SubscriptionPackageDto> CreatePackageAsync(SubscriptionPackageDto dto)
+        {
+            var p = new SubscriptionPackage
+            {
+                PackageName = dto.PackageName,
+                Price = dto.Price,
+                ExtraTokenAmount = dto.ExtraTokenAmount,
+                DurationUnit = dto.DurationUnit,
+                DurationValue = dto.DurationValue
+            };
+            await _packageRepo.AddAsync(p);
+            await _packageRepo.SaveAsync();
+            dto.PackageId = p.PackageId;
+            return dto;
+        }
+
+        public async Task<bool> UpdatePackageAsync(SubscriptionPackageDto dto)
+        {
+            var p = await _packageRepo.GetByIdAsync(dto.PackageId);
+            if (p == null) return false;
+
+            p.PackageName = dto.PackageName;
+            p.Price = dto.Price;
+            p.ExtraTokenAmount = dto.ExtraTokenAmount;
+            p.DurationUnit = dto.DurationUnit;
+            p.DurationValue = dto.DurationValue;
+
+            _packageRepo.Update(p);
+            await _packageRepo.SaveAsync();
+            return true;
+        }
+
+        public async Task<bool> DeletePackageAsync(int id)
+        {
+            var p = await _packageRepo.GetByIdAsync(id);
+            if (p == null) return false;
+
+            _packageRepo.Delete(p);
+            await _packageRepo.SaveAsync();
+            return true;
+        }
+
+        public async Task<IEnumerable<UserTransactionDto>> GetAllTransactionsAsync()
+        {
+            var transactions = await _transactionRepo.GetAllNoTrackingAsync(
+                includeProperties: "User,Package"
+            );
+            return transactions.Select(t => new UserTransactionDto
+            {
+                TransactionId = t.TransactionId,
+                UserId = t.UserId,
+                PackageId = t.PackageId,
+                Amount = t.Amount,
+                PaymentGateway = t.PaymentGateway,
+                TransactionStatus = t.TransactionStatus,
+                CreatedAt = t.CreatedAt,
+                FullName = t.User?.FullName ?? "N/A",
+                PackageName = t.Package?.PackageName ?? "Gói đã xóa"
+            }).OrderByDescending(t => t.CreatedAt).ToList();
+        }
     }
 }

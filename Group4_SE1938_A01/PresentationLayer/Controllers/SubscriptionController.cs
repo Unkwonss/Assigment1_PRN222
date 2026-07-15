@@ -204,5 +204,59 @@ namespace PresentationLayer.Controllers
 
             return NoContent(); // Trả về 204 cho Momo để xác nhận đã xử lý IPN
         }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ManagePackages()
+        {
+            var packages = await _subscriptionService.GetAllPackagesAsync();
+            var transactions = await _subscriptionService.GetAllTransactionsAsync();
+
+            var viewModel = new Models.ManagePackagesViewModel
+            {
+                Packages = packages,
+                Transactions = transactions
+            };
+
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateOrUpdatePackage(BusinessLayer.DTOs.SubscriptionPackageDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["Error"] = "Dữ liệu nhập vào không hợp lệ.";
+                return RedirectToAction("ManagePackages");
+            }
+
+            if (dto.PackageId > 0)
+            {
+                var success = await _subscriptionService.UpdatePackageAsync(dto);
+                if (success) TempData["Success"] = "Cập nhật gói thành công.";
+                else TempData["Error"] = "Cập nhật gói thất bại.";
+            }
+            else
+            {
+                await _subscriptionService.CreatePackageAsync(dto);
+                TempData["Success"] = "Thêm mới gói thành công.";
+            }
+
+            return RedirectToAction("ManagePackages");
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeletePackage(int id)
+        {
+            var success = await _subscriptionService.DeletePackageAsync(id);
+            if (success) TempData["Success"] = "Xóa gói thành công.";
+            else TempData["Error"] = "Xóa gói thất bại.";
+
+            return RedirectToAction("ManagePackages");
+        }
     }
 }

@@ -83,8 +83,8 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" ? "active" : "")" asp-controller="Subscription" asp-action="Index">
-                                        <i class="bi bi-wallet2"></i> Mua gói Token
+                                    <a class="nav-link-custom @(ViewContext.RouteData.Values["controller"]?.ToString() == "Subscription" && ViewContext.RouteData.Values["action"]?.ToString() == "ManagePackages" ? "active" : "")" asp-controller="Subscription" asp-action="ManagePackages">
+                                        <i class="bi bi-wallet2"></i> Quản lý gói Token
                                     </a>
                                 </li>
                             }
