@@ -264,9 +264,17 @@ namespace BusinessLayer.Services
                 );
                 int totalWeeklyUsed = weeklyUsedTokens.Sum(h => (h.TokensIn ?? 0) + (h.TokensOut ?? 0));
 
-                if (totalWeeklyUsed >= user.WeeklyTokenLimit)
+                // Tính toán hạn mức khả dụng (bao gồm token mua thêm trả phí còn hạn sử dụng)
+                bool hasActivePaidTokens = user.PurchasedTokenBalance > 0 && (user.PurchasedTokenExpiry == null || user.PurchasedTokenExpiry > DateTime.UtcNow);
+                int activeLimit = user.WeeklyTokenLimit;
+                if (hasActivePaidTokens)
                 {
-                    string limitMessage = $"⚠️ **Hạn mức sử dụng hàng tuần của bạn đã hết!**\n\n- Đã dùng: **{totalWeeklyUsed:N0}** / **{user.WeeklyTokenLimit:N0}** tokens.\n- Vui lòng liên hệ Giảng viên hoặc Quản trị viên để được tăng thêm hạn mức.";
+                    activeLimit += user.PurchasedTokenBalance;
+                }
+
+                if (totalWeeklyUsed >= activeLimit)
+                {
+                    string limitMessage = $"⚠️ **Hạn mức sử dụng của bạn đã hết!**\n\n- Đã dùng trong tuần: **{totalWeeklyUsed:N0}** / Hạn mức khả dụng: **{activeLimit:N0}** tokens.\n- Vui lòng mua thêm gói Token hoặc liên hệ Quản trị viên để được tăng thêm hạn mức.";
                     var limitHistory = new ChatHistory
                     {
                         SessionId = sessionId,

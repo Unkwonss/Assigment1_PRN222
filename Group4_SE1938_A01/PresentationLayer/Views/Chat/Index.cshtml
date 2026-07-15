@@ -663,6 +663,32 @@
                 reloadChatSubjects();
             });
 
+            const currentUserId = '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value';
+            connection.on("ReceiveUserTokenUpdate", function (updatedUserId, newBalance) {
+                if (updatedUserId.toString() === currentUserId) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Đã cập nhật Token!',
+                        text: 'Hạn mức token khả dụng của bạn đã được hệ thống cập nhật tăng lên. Bạn có thể tiếp tục trò chuyện ngay bây giờ!',
+                        background: 'rgba(13, 17, 28, 0.95)',
+                        color: '#fff',
+                        confirmButtonColor: '#10b981',
+                        toast: true,
+                        position: 'top-end',
+                        timer: 5000,
+                        showConfirmButton: false
+                    });
+                    
+                    // Nếu đang có thông báo hết hạn mức ở cuối chat area, có thể chèn một thông báo thông báo hệ thống đã mở khóa
+                    $("#chatMessagesArea").append(`
+                        <div class="chat-bubble chat-bubble-bot align-self-start border border-success border-opacity-20" style="background: rgba(16, 185, 129, 0.05);">
+                            <div class="small text-success"><i class="bi bi-shield-check-fill me-1"></i> [Hệ thống] Hạn mức của bạn đã được Admin nâng cấp realtime. Bạn đã có thể trò chuyện tiếp tục!</div>
+                        </div>
+                    `);
+                    scrollToBottom();
+                }
+            });
+
             connection.start().catch(err => console.error("SignalR Connection Error: ", err));
         });
 

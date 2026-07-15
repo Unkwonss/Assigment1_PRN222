@@ -190,6 +190,7 @@ namespace PresentationLayer.Controllers
                 await _userService.UpdateUserAsync(user);
                 TempData["Success"] = $"Đã cập nhật hạn mức token của người dùng '{user.FullName}' thành {newLimit:N0} tokens.";
                 await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Cập nhật hạn mức", $"Hạn mức token của '{user.FullName}' đã được cập nhật thành {newLimit:N0} tokens.", "info");
+                await _hubContext.Clients.All.SendAsync("ReceiveUserTokenUpdate", userId, user.WeeklyTokenLimit + user.PurchasedTokenBalance);
             }
             else
             {
@@ -218,6 +219,7 @@ namespace PresentationLayer.Controllers
                 {
                     user.WeeklyTokenLimit = newLimit;
                     await _userService.UpdateUserAsync(user);
+                    await _hubContext.Clients.All.SendAsync("ReceiveUserTokenUpdate", user.UserId, user.WeeklyTokenLimit + user.PurchasedTokenBalance);
                 }
 
                 TempData["Success"] = $"Đã cập nhật hạn mức token mặc định của tất cả sinh viên & giáo viên thành {newLimit:N0} tokens.";
