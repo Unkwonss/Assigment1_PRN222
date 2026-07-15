@@ -59,4 +59,32 @@ namespace PresentationLayer.Models
         public int Hour { get; set; }
         public int Count { get; set; }
     }
+
+    public class StrategyComparisonViewModel
+    {
+        public string StrategyName { get; set; } = string.Empty;
+        public double AvgPrecision { get; set; }
+        public double AvgRecall { get; set; }
+        public double AvgMRR { get; set; }
+        public double AvgLatency { get; set; }
+        public int TestCount { get; set; }
+    }
+
+    public class SubjectTokenStatsViewModel
+    {
+        public string SubjectName { get; set; } = string.Empty;
+        public string SubjectCode { get; set; } = string.Empty;
+        public int TotalMessages { get; set; }
+        public int TotalTokens { get; set; }
+        public double AvgTokensPerMessage => TotalMessages > 0 ? Math.Round((double)TotalTokens / TotalMessages, 0) : 0;
+    }
+
+    public class SubjectDocStatsViewModel
+    {
+        public string SubjectName { get; set; } = string.Empty;
+        public string SubjectCode { get; set; } = string.Empty;
+        public int DocumentCount { get; set; }
+        public int IndexedCount { get; set; }
+        public int ChunkCount { get; set; }
+    }
 }

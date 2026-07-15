@@ -343,6 +343,188 @@
     <!-- Removed Details Table -->
 </div>
 
+<!-- === NEW STATS ROW 1: Strategy Comparison + Subject Token Stats === -->
+<div class="container-fluid px-4 mb-5">
+    <div class="row g-4">
+        <!-- So sánh Chunking Strategy -->
+        <div class="col-lg-6">
+            <div class="card card-glass h-100">
+                <div class="card-header header-gradient py-3 px-4">
+                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-diagram-3-fill text-success"></i> So sánh Chunking Strategy (RBL Benchmark)</h5>
+                </div>
+                <div class="card-body p-4">
+                    @{
+                        var strategyComparison = ViewBag.StrategyComparison as List<PresentationLayer.Models.StrategyComparisonViewModel> ?? new List<PresentationLayer.Models.StrategyComparisonViewModel>();
+                    }
+                    @if (!strategyComparison.Any())
+                    {
+                        <div class="text-center text-muted py-4">Chưa có dữ liệu benchmark theo strategy. Hãy chạy thử nghiệm trước.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-glass align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Strategy</th>
+                                        <th class="text-center">Precision</th>
+                                        <th class="text-center">Recall</th>
+                                        <th class="text-center">MRR</th>
+                                        <th class="text-center">Latency (ms)</th>
+                                        <th class="text-center">Tests</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var s in strategyComparison.OrderByDescending(x => x.AvgMRR))
+                                    {
+                                        <tr>
+                                            <td class="fw-bold text-white">@s.StrategyName</td>
+                                            <td class="text-center">
+                                                <span class="badge" style="background:rgba(99,102,241,0.25);color:#818cf8;">@s.AvgPrecision.ToString("P1")</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge" style="background:rgba(52,211,153,0.2);color:#34d399;">@s.AvgRecall.ToString("P1")</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge" style="background:rgba(244,114,182,0.2);color:#f472b6;">@s.AvgMRR.ToString("P1")</span>
+                                            </td>
+                                            <td class="text-center font-monospace" style="color:#fbbf24;">@s.AvgLatency.ToString("N0") ms</td>
+                                            <td class="text-center"><span class="badge bg-secondary">@s.TestCount</span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="height:220px;">
+                            <canvas id="strategyChart"></canvas>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Token trung bình theo môn học -->
+        <div class="col-lg-6">
+            <div class="card card-glass h-100">
+                <div class="card-header header-gradient py-3 px-4">
+                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-book-half text-info"></i> Mức độ sử dụng Chatbot theo Môn học</h5>
+                </div>
+                <div class="card-body p-4">
+                    @{
+                        var subjectTokenStats = ViewBag.SubjectTokenStats as List<PresentationLayer.Models.SubjectTokenStatsViewModel> ?? new List<PresentationLayer.Models.SubjectTokenStatsViewModel>();
+                    }
+                    @if (!subjectTokenStats.Any())
+                    {
+                        <div class="text-center text-muted py-4">Chưa có lịch sử chat theo môn học.</div>
+                    }
+                    else
+                    {
+                        var maxToken = subjectTokenStats.Max(x => x.TotalTokens);
+                        <div class="table-responsive">
+                            <table class="table table-glass align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Môn học</th>
+                                        <th class="text-center">Số câu hỏi</th>
+                                        <th class="text-center">Avg Token/Câu</th>
+                                        <th>Tổng Token</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var sub in subjectTokenStats)
+                                    {
+                                        var pct = maxToken > 0 ? (sub.TotalTokens * 100 / maxToken) : 0;
+                                        <tr>
+                                            <td>
+                                                <div class="fw-bold text-white">@sub.SubjectCode</div>
+                                                <div class="small text-muted">@sub.SubjectName</div>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-info bg-opacity-25 text-info">@sub.TotalMessages</span></td>
+                                            <td class="text-center font-monospace" style="color:#a78bfa;">@sub.AvgTokensPerMessage.ToString("N0")</td>
+                                            <td style="min-width:150px;">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="flex-grow-1">
+                                                        <div style="background:rgba(99,102,241,0.15);border-radius:6px;height:8px;">
+                                                            <div style="width:@pct%;background:linear-gradient(90deg,#6366f1,#a855f7);height:8px;border-radius:6px;"></div>
+                                                        </div>
+                                                    </div>
+                                                    <small class="text-muted font-monospace">@sub.TotalTokens.ToString("N0")</small>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- === NEW STATS ROW 2: Subject Document Stats === -->
+<div class="container-fluid px-4 mb-5">
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card card-glass">
+                <div class="card-header header-gradient py-3 px-4">
+                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-database-fill-check text-warning"></i> Kho RAG theo Môn học (Tài liệu / Đã Index / Số Chunks)</h5>
+                </div>
+                <div class="card-body p-4">
+                    @{
+                        var subjectDocStats = ViewBag.SubjectDocStats as List<PresentationLayer.Models.SubjectDocStatsViewModel> ?? new List<PresentationLayer.Models.SubjectDocStatsViewModel>();
+                    }
+                    @if (!subjectDocStats.Any())
+                    {
+                        <div class="text-center text-muted py-4">Chưa có môn học nào trong hệ thống.</div>
+                    }
+                    else
+                    {
+                        var maxChunks = subjectDocStats.Max(x => x.ChunkCount);
+                        <div class="row g-3">
+                            @foreach (var sub in subjectDocStats)
+                            {
+                                var indexPct = sub.DocumentCount > 0 ? (sub.IndexedCount * 100 / sub.DocumentCount) : 0;
+                                var chunkPct = maxChunks > 0 ? (sub.ChunkCount * 100 / maxChunks) : 0;
+                                <div class="col-lg-4 col-md-6">
+                                    <div style="background:rgba(30,41,59,0.6);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <div class="fw-bold text-white">@sub.SubjectCode</div>
+                                                <div class="small text-muted">@sub.SubjectName</div>
+                                            </div>
+                                            <span class="badge" style="background:rgba(251,191,36,0.2);color:#fbbf24;">@sub.ChunkCount chunks</span>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between small mb-1">
+                                                <span style="color:#94a3b8;">Index coverage</span>
+                                                <span style="color:#34d399;">@sub.IndexedCount / @sub.DocumentCount docs</span>
+                                            </div>
+                                            <div style="background:rgba(255,255,255,0.08);border-radius:6px;height:6px;">
+                                                <div style="width:@indexPct%;background:linear-gradient(90deg,#34d399,#10b981);height:6px;border-radius:6px;"></div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="d-flex justify-content-between small mb-1">
+                                                <span style="color:#94a3b8;">Chunk volume</span>
+                                                <span style="color:#a78bfa;">@chunkPct%</span>
+                                            </div>
+                                            <div style="background:rgba(255,255,255,0.08);border-radius:6px;height:6px;">
+                                                <div style="width:@chunkPct%;background:linear-gradient(90deg,#6366f1,#a855f7);height:6px;border-radius:6px;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

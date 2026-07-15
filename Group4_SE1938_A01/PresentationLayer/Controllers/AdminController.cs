@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using BusinessLayer.Interfaces;
 using BusinessLayer.DTOs;
+using PresentationLayer.Models;
+using Microsoft.AspNetCore.SignalR;
+using PresentationLayer.Hubs;
 
 namespace PresentationLayer.Controllers
 {
@@ -15,10 +18,12 @@ namespace PresentationLayer.Controllers
     public class AdminController : Controller
     {
         private readonly IUserService _userService;
+        private readonly IHubContext<NewsHub> _hubContext;
 
-        public AdminController(IUserService userService)
+        public AdminController(IUserService userService, IHubContext<NewsHub> hubContext)
         {
             _userService = userService;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -123,6 +128,105 @@ namespace PresentationLayer.Controllers
             }
 
             return RedirectToAction("ManageStudents");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ManageTokens(string? searchTerm, string? roleFilter)
+        {
+            var allUsers = await _userService.GetAllUsersAsync();
+            var targetUsers = allUsers.Where(u => u.Role == "Student" || u.Role == "Teacher");
+
+            if (!string.IsNullOrWhiteSpace(roleFilter))
+            {
+                targetUsers = targetUsers.Where(u => u.Role.Equals(roleFilter, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.Trim().ToLower();
+                targetUsers = targetUsers.Where(u =>
+                    (u.FullName != null && u.FullName.ToLower().Contains(term)) ||
+                    (u.Email != null && u.Email.ToLower().Contains(term)) ||
+                    (u.Username != null && u.Username.ToLower().Contains(term))
+                );
+            }
+
+            // Calculate weekly token usage for each active student (starting from Monday 00:00:00 UTC) via UserService
+            var userIds = targetUsers.Select(u => u.UserId).ToList();
+            var weeklyUsage = await _userService.GetWeeklyTokenUsageMapAsync(userIds);
+
+            var studentTokenList = targetUsers.Select(s => new UserTokenUsageViewModel
+            {
+                UserId = s.UserId,
+                FullName = s.FullName,
+                Email = s.Email,
+                Username = s.Username,
+                Role = s.Role,
+                WeeklyTokenLimit = s.WeeklyTokenLimit,
+                WeeklyTokenUsed = weeklyUsage.ContainsKey(s.UserId) ? weeklyUsage[s.UserId] : 0
+            }).ToList();
+
+            ViewBag.SearchTerm = searchTerm;
+            ViewBag.RoleFilter = roleFilter;
+            return View(studentTokenList);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateTokenLimit(int userId, int newLimit)
+        {
+            if (newLimit < 0)
+            {
+                TempData["Error"] = "Hạn mức token không thể nhỏ hơn 0.";
+                return RedirectToAction("ManageTokens");
+            }
+
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user != null)
+            {
+                user.WeeklyTokenLimit = newLimit;
+                await _userService.UpdateUserAsync(user);
+                TempData["Success"] = $"Đã cập nhật hạn mức token của người dùng '{user.FullName}' thành {newLimit:N0} tokens.";
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Cập nhật hạn mức", $"Hạn mức token của '{user.FullName}' đã được cập nhật thành {newLimit:N0} tokens.", "info");
+            }
+            else
+            {
+                TempData["Error"] = "Không tìm thấy người dùng.";
+            }
+
+            return RedirectToAction("ManageTokens");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateAllTokenLimits(int newLimit)
+        {
+            if (newLimit < 0)
+            {
+                TempData["Error"] = "Hạn mức token không thể nhỏ hơn 0.";
+                return RedirectToAction("ManageTokens");
+            }
+
+            try
+            {
+                var allUsers = await _userService.GetAllUsersAsync();
+                var targets = allUsers.Where(u => u.Role == "Student" || u.Role == "Teacher");
+
+                foreach (var user in targets)
+                {
+                    user.WeeklyTokenLimit = newLimit;
+                    await _userService.UpdateUserAsync(user);
+                }
+
+                TempData["Success"] = $"Đã cập nhật hạn mức token mặc định của tất cả sinh viên & giáo viên thành {newLimit:N0} tokens.";
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Hạn mức chung", $"Hạn mức mặc định của tất cả sinh viên & giáo viên đã được thay đổi thành {newLimit:N0} tokens.", "warning");
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi cập nhật hàng loạt: {ex.Message}";
+            }
+
+            return RedirectToAction("ManageTokens");
         }
     }
 }

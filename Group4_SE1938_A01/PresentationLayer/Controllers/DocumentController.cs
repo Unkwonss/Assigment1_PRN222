@@ -146,6 +146,7 @@ namespace PresentationLayer.Controllers
 
             TempData["Success"] = "Thêm môn học thành công!";
             await _hubContext.Clients.All.SendAsync("ReceiveSubjectUpdate");
+            await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Môn học mới", $"Môn học '{created.SubjectName}' đã được thêm mới thành công.", "success");
             return RedirectToAction("Index");
         }
 
@@ -181,6 +182,7 @@ namespace PresentationLayer.Controllers
 
             TempData["Success"] = "Cập nhật môn học thành công!";
             await _hubContext.Clients.All.SendAsync("ReceiveSubjectUpdate");
+            await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Cập nhật môn học", $"Môn học '{subject.SubjectName}' đã được cập nhật thành công.", "info");
             return RedirectToAction("Index");
         }
 
@@ -193,6 +195,7 @@ namespace PresentationLayer.Controllers
                 await _documentService.DeleteSubjectAsync(subjectId);
                 TempData["Success"] = "Xóa môn học thành công!";
                 await _hubContext.Clients.All.SendAsync("ReceiveSubjectUpdate");
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Xóa môn học", "Một môn học đã được xóa khỏi hệ thống.", "warning");
             }
             catch (Exception)
             {
@@ -274,6 +277,7 @@ namespace PresentationLayer.Controllers
             var chapter = new ChapterDto { SubjectId = subjectId, ChapterNumber = chapterNumber, ChapterName = chapterName };
             await _documentService.CreateChapterAsync(chapter);
             await _hubContext.Clients.All.SendAsync("ReceiveChapterUpdate", subjectId);
+            await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Chương học mới", $"Chương '{chapter.ChapterNumber}: {chapter.ChapterName}' đã được tạo thành công.", "success");
             return Json(new { success = true, message = "Thêm chương mới thành công!" });
         }
 
@@ -299,6 +303,7 @@ namespace PresentationLayer.Controllers
             existing.ChapterName = chapterName;
             await _documentService.UpdateChapterAsync(existing);
             await _hubContext.Clients.All.SendAsync("ReceiveChapterUpdate", existing.SubjectId);
+            await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Cập nhật chương", $"Chương '{existing.ChapterNumber}: {existing.ChapterName}' đã được cập nhật.", "info");
             return Json(new { success = true, message = "Cập nhật chương thành công!" });
         }
 
@@ -316,11 +321,13 @@ namespace PresentationLayer.Controllers
             {
                 var existing = await _documentService.GetChapterByIdAsync(chapterId);
                 int subjectId = existing?.SubjectId ?? 0;
+                string chapName = existing != null ? $"Chương '{existing.ChapterNumber}: {existing.ChapterName}'" : "Một chương học";
                 await _documentService.DeleteChapterAsync(chapterId);
                 if (subjectId > 0)
                 {
                     await _hubContext.Clients.All.SendAsync("ReceiveChapterUpdate", subjectId);
                 }
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Xóa chương học", $"{chapName} đã được xóa khỏi môn học.", "warning");
                 return Json(new { success = true, message = "Xóa chương thành công!" });
             }
             catch (Exception)
@@ -469,6 +476,7 @@ namespace PresentationLayer.Controllers
                 }
 
                 await _hubContext.Clients.All.SendAsync("ReceiveDocumentUpdate", chapterId);
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Tài liệu mới", $"Tài liệu '{title}' đã được tải lên thành công.", "success");
                 
                 string msg = wasAutoIndexed 
                     ? "Tải lên và tự động lập chỉ mục tài liệu thành công!" 
@@ -590,8 +598,10 @@ namespace PresentationLayer.Controllers
             try
             {
                 int chapterId = document.ChapterId;
+                string docTitle = document.Title;
                 await _documentService.DeleteDocumentAsync(documentId);
                 await _hubContext.Clients.All.SendAsync("ReceiveDocumentUpdate", chapterId);
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Xóa tài liệu", $"Tài liệu '{docTitle}' đã được xóa.", "warning");
                 return Json(new { success = true, message = "Xóa tài liệu thành công!" });
             }
             catch (Exception ex)
@@ -639,6 +649,7 @@ namespace PresentationLayer.Controllers
                 if (doc != null)
                 {
                     await _hubContext.Clients.All.SendAsync("ReceiveDocumentUpdate", doc.ChapterId);
+                    await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Chỉ mục tài liệu", $"Tài liệu '{doc.Title}' đã được lập chỉ mục (index) thành công!", "success");
                 }
                 return Json(new { success = true, message = "Lập chỉ mục RAG thành công!", indexId = index.IndexId });
             }
@@ -646,6 +657,9 @@ namespace PresentationLayer.Controllers
             {
                 _logger.LogError(ex, "IndexDocument failed. DocumentId={DocumentId}, ModelId={ModelId}, StrategyId={StrategyId}. Details: {Details}",
                     documentId, modelId, strategyId, BuildExceptionDetails(ex));
+                var docObj = await _documentService.GetDocumentByIdAsync(documentId);
+                string titleStr = docObj?.Title ?? "Tài liệu";
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Lỗi chỉ mục", $"Tài liệu '{titleStr}' lập chỉ mục thất bại: {ex.Message}", "error");
                 return Json(new { success = false, message = $"Lỗi khi phân nhỏ: {ex.Message}" });
             }
         }

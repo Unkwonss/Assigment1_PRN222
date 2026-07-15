@@ -128,6 +128,9 @@ public partial class Prn222AssigmentContext : DbContext
             entity.HasIndex(e => e.SessionId, "IX_ChatHistories_SessionId");
 
             entity.Property(e => e.Timestamp).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.TokensIn);
+            entity.Property(e => e.TokensOut);
+            entity.Property(e => e.LatencyMs);
 
             entity.HasOne(d => d.Session).WithMany(p => p.ChatHistories)
                 .HasForeignKey(d => d.SessionId)
@@ -278,6 +281,10 @@ public partial class Prn222AssigmentContext : DbContext
 
             entity.Property(e => e.SubjectCode).HasMaxLength(20);
             entity.Property(e => e.SubjectName).HasMaxLength(150);
+            entity.Property(e => e.DefaultModelId);
+            entity.Property(e => e.DefaultStrategyId);
+            entity.Property(e => e.DefaultChunkSize);
+            entity.Property(e => e.DefaultChunkOverlap);
         });
 
         modelBuilder.Entity<SubjectTeacher>(entity =>

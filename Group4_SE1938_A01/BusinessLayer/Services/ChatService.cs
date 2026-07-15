@@ -270,16 +270,48 @@ namespace BusinessLayer.Services
                         : relevantChunks[0].Chunk.Content);
             }
 
+            int? latencyMs = null;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
             if (relevantChunks == null)
             {
+                sw.Stop();
+                latencyMs = 0;
+                promptTokens = 0;
+                completionTokens = 0;
                 // Dimension mismatch: tất cả chunk bị loại vì index bằng model khác
                 botResponse = "⚠️ Tài liệu chưa được index với model này. " +
                               "Vui lòng chọn lại tài liệu và nhấn \"Re-Index\" với model đang chọn.";
             }
             else if (!relevantChunks.Any())
             {
-                botResponse = "Không tìm thấy nội dung liên quan trong tài liệu đã index. " +
-                              "Vui lòng đặt câu hỏi cụ thể hơn hoặc kiểm tra lại tài liệu nguồn.";
+                var recentHistory = await _historyRepo.GetAllAsync(
+                    h => h.SessionId == sessionId,
+                    orderBy: q => q.OrderBy(h => h.Timestamp)
+                );
+                var historyTuples = new List<(string role, string content)>();
+                foreach (var h in recentHistory.TakeLast(5))
+                {
+                    historyTuples.Add(("user", h.UserMessage));
+                    if (!string.IsNullOrWhiteSpace(h.BotResponse))
+                    {
+                        historyTuples.Add(("assistant", h.BotResponse));
+                    }
+                }
+
+                _logger.LogInformation("[RAG-PIPELINE] No relevant chunks found above similarity threshold. Calling Gemini with empty context.");
+
+                var geminiResult = await _geminiService.GenerateResponseAsync(
+                    userMessage,
+                    new List<string>(),
+                    historyTuples,
+                    subjectCode
+                );
+                sw.Stop();
+                latencyMs = (int)sw.ElapsedMilliseconds;
+                botResponse = "*(Lưu ý: Không tìm thấy tài liệu liên quan trong giáo trình. Dưới đây là câu trả lời tham khảo)*\n\n" + geminiResult.Response;
+                promptTokens = geminiResult.PromptTokens;
+                completionTokens = geminiResult.CompletionTokens;
             }
             else if (relevantChunks != null)
             {
@@ -319,7 +351,8 @@ namespace BusinessLayer.Services
                     historyTuples,
                     subjectCode
                 );
-                
+                sw.Stop();
+                latencyMs = (int)sw.ElapsedMilliseconds;
                 botResponse = geminiResult.Response;
                 promptTokens = geminiResult.PromptTokens;
                 completionTokens = geminiResult.CompletionTokens;
@@ -332,9 +365,10 @@ namespace BusinessLayer.Services
                 UserMessage = userMessage,
                 StandaloneQuery = userMessage,
                 BotResponse = botResponse,
+                Timestamp = DateTime.UtcNow,
                 TokensIn = promptTokens,
                 TokensOut = completionTokens,
-                Timestamp = DateTime.UtcNow
+                LatencyMs = latencyMs
             };
 
             await _historyRepo.AddAsync(history);
@@ -342,7 +376,17 @@ namespace BusinessLayer.Services
 
             // Save Citations if any match
             var citationsWithScore = new List<(ChatCitationDto Citation, float Score)>();
-            if (relevantChunks != null && relevantChunks.Any())
+            
+            bool responseIndicatesNoDocumentMention = 
+                botResponse.Contains("Tài liệu chưa đề cập", StringComparison.OrdinalIgnoreCase) ||
+                botResponse.Contains("Tài liệu không đề cập", StringComparison.OrdinalIgnoreCase) ||
+                botResponse.Contains("Tài liệu không nhắc đến", StringComparison.OrdinalIgnoreCase) ||
+                botResponse.Contains("không tìm thấy trong tài liệu", StringComparison.OrdinalIgnoreCase) ||
+                botResponse.Contains("không có thông tin trong tài liệu", StringComparison.OrdinalIgnoreCase) ||
+                botResponse.Contains("không tìm thấy thông tin này", StringComparison.OrdinalIgnoreCase) ||
+                botResponse.Contains("chưa đề cập nội dung này", StringComparison.OrdinalIgnoreCase);
+
+            if (relevantChunks != null && relevantChunks.Any() && !responseIndicatesNoDocumentMention)
             {
                 foreach (var tc in relevantChunks)
                 {
@@ -499,7 +543,7 @@ namespace BusinessLayer.Services
                 result = scored
                     .OrderByDescending(x => x.Score)
                     .Take(topK)
-                    .Where(x => x.Score > 0.4f)
+                    .Where(x => x.Score > 0.55f)
                     .ToList();
 
                 if (!result.Any())

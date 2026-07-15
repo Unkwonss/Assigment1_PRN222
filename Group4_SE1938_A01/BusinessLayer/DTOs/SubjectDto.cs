@@ -10,14 +10,16 @@ namespace BusinessLayer.DTOs
         
         public int? ManagedByUserId { get; set; }
         public string? ManagedByUserName { get; set; }
-        
-        public List<int> AssignedTeacherIds { get; set; } = new List<int>();
-        public List<UserDto> AssignedTeachers { get; set; } = new List<UserDto>();
 
         public int? DefaultModelId { get; set; }
         public int? DefaultStrategyId { get; set; }
         public int? DefaultChunkSize { get; set; }
         public int? DefaultChunkOverlap { get; set; }
+        
+        public List<int> AssignedTeacherIds { get; set; } = new List<int>();
+        public List<UserDto> AssignedTeachers { get; set; } = new List<UserDto>();
+
+
 
         public virtual ICollection<ChapterDto> Chapters { get; set; } = new List<ChapterDto>();
         public virtual ICollection<ChatSessionDto> ChatSessions { get; set; } = new List<ChatSessionDto>();

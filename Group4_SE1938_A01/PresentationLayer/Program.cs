@@ -19,7 +19,8 @@ namespace PresentationLayer
             builder.Services.AddControllersWithViews();
             builder.Services.AddSignalR();
             builder.Services.AddDbContext<Prn222AssigmentContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+                    sqlOptions => sqlOptions.CommandTimeout(300))); // 5 phút để tránh timeout khi index tài liệu lớn
 
             // Bind GeminiSettings từ config
             builder.Services.Configure<GeminiSettings>(

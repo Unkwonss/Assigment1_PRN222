@@ -132,6 +132,15 @@ namespace PresentationLayer.Controllers
                 var result = await _chatService.SendMessageWithScoresAsync(sessionId, message, modelId, strategyId, chunkSize, chunkOverlap);
                 var historyRecord = result.History;
                 
+                // Broadcast updated token usage to ManageTokens page in real-time via ChatService
+                var session = await _chatService.GetSessionByIdAsync(sessionId);
+                if (session != null)
+                {
+                    int userId = session.UserId;
+                    int totalWeeklyUsed = await _chatService.GetWeeklyTokenUsageBySessionAsync(sessionId);
+                    await _hubContext.Clients.All.SendAsync("ReceiveUserTokenUpdate", userId, totalWeeklyUsed);
+                }
+
                 return Json(new {
                     success = true,
                     historyId = historyRecord.HistoryId,

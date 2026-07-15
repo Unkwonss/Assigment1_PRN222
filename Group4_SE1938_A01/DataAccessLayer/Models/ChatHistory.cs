@@ -21,6 +21,7 @@ public partial class ChatHistory
 
     public int? TokensOut { get; set; }
 
+    public int? LatencyMs { get; set; }
     public virtual ICollection<ChatCitation> ChatCitations { get; set; } = new List<ChatCitation>();
 
     public virtual ChatSession Session { get; set; } = null!;

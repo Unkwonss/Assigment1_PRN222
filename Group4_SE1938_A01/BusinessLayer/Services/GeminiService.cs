@@ -87,9 +87,12 @@ namespace BusinessLayer.Services
             var sb = new StringBuilder();
 
             sb.AppendLine("Bạn là trợ lý học tập cho môn " + (string.IsNullOrEmpty(subject) ? "học" : subject) + ".");
-            sb.AppendLine("Nhiệm vụ: Đọc kỹ TÀI LIỆU THAM KHẢO bên dưới, sau đó trả lời câu hỏi của sinh viên dựa trên nội dung tài liệu đó.");
-            sb.AppendLine("Hãy trích dẫn và giải thích nội dung từ tài liệu một cách chi tiết.");
-            sb.AppendLine("CHỈ khi tài liệu hoàn toàn KHÔNG chứa bất kỳ thông tin nào liên quan đến câu hỏi, hãy trả lời: 'Tài liệu chưa đề cập nội dung này.'");
+            sb.AppendLine("Nhiệm vụ: Đọc kỹ TÀI LIỆU THAM KHẢO bên dưới (được đánh dấu là --- Đoạn 1 ---, --- Đoạn 2 ---,...), sau đó trả lời câu hỏi của sinh viên dựa trên nội dung tài liệu đó.");
+            sb.AppendLine("HƯỚNG DẪN TRÍCH DẪN NGUỒN:");
+            sb.AppendLine("1. Bạn PHẢI trích dẫn nguồn ngay giữa câu trả lời (inline citation) tại những câu cụ thể mà bạn lấy thông tin từ tài liệu.");
+            sb.AppendLine("2. Hãy sử dụng đúng ký hiệu [Nguồn X] trong đó X là số thứ tự của Đoạn văn bản chứa thông tin đó. Ví dụ: '[Nguồn 1]', '[Nguồn 2]'. Nếu thông tin từ nhiều đoạn, hãy ghi: '[Nguồn 1, Nguồn 2]'.");
+            sb.AppendLine("3. Ví dụ cách trả lời: 'Theo tài liệu [Nguồn 1], từ vựng bài 1 gồm... nhưng ngữ pháp lại ở bài 2 [Nguồn 2].'");
+            sb.AppendLine("4. CHỈ khi tài liệu hoàn toàn KHÔNG chứa bất kỳ thông tin nào liên quan đến câu hỏi, hãy trả lời: 'Tài liệu chưa đề cập nội dung này.'");
             sb.AppendLine("Trả lời bằng tiếng Việt, rõ ràng, có cấu trúc.");
             sb.AppendLine();
 
