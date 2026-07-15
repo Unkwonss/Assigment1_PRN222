@@ -69,11 +69,13 @@ namespace PresentationLayer.Controllers
                     .Replace("Gói Tháng Đột Phá", "Goi Thang Dot Pha")
                     .Replace("Gói Siêu Cấp VIP", "Goi Sieu Cap VIP");
                 string orderInfo = $"Mua {cleanPackageName} - {package.ExtraTokenAmount} Tokens";
+                string extraData = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(userId.ToString()));
+                
                 var (success, payUrl, message) = await _momoService.CreatePaymentUrlAsync(
                     transaction.TransactionId.ToString(),
                     orderInfo,
                     (long)package.Price,
-                    userId.ToString() // extraData chứa UserId
+                    extraData
                 );
 
                 if (success)
@@ -139,7 +141,8 @@ namespace PresentationLayer.Controllers
                 if (success)
                 {
                     // Phát tín hiệu SignalR đồng bộ số dư token realtime cho user
-                    if (int.TryParse(extraData, out int userId))
+                    int userId = ParseUserIdFromExtraData(extraData);
+                    if (userId > 0)
                     {
                         var user = await _userService.GetUserByIdAsync(userId);
                         if (user != null)
@@ -186,7 +189,8 @@ namespace PresentationLayer.Controllers
                     if (resultCode == 0)
                     {
                         var success = await _subscriptionService.ProcessSuccessfulSubscriptionAsync(transactionId);
-                        if (success && int.TryParse(extraData, out int userId))
+                        int userId = ParseUserIdFromExtraData(extraData);
+                        if (success && userId > 0)
                         {
                             var user = await _userService.GetUserByIdAsync(userId);
                             if (user != null)
@@ -250,7 +254,6 @@ namespace PresentationLayer.Controllers
 
             return RedirectToAction("ManagePackages");
         }
-
         [HttpPost]
         [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
@@ -261,6 +264,23 @@ namespace PresentationLayer.Controllers
             else TempData["Error"] = "Xóa gói thất bại.";
 
             return RedirectToAction("ManagePackages");
+        }
+
+        private int ParseUserIdFromExtraData(string extraData)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(extraData)) return 0;
+                var bytes = Convert.FromBase64String(extraData);
+                var decoded = System.Text.Encoding.UTF8.GetString(bytes);
+                if (int.TryParse(decoded, out int userId)) return userId;
+            }
+            catch
+            {
+                // Fallback
+                if (int.TryParse(extraData, out int userId)) return userId;
+            }
+            return 0;
         }
     }
 }

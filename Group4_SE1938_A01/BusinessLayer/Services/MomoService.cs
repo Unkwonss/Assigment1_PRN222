@@ -62,10 +62,11 @@ namespace BusinessLayer.Services
                 var requestBody = new
                 {
                     partnerCode = _settings.PartnerCode,
+                    accessKey = _settings.AccessKey,
                     partnerName = "VietRAG System",
                     storeId = "VietRAG_Store",
                     requestId = requestId,
-                    amount = amount,
+                    amount = amount.ToString("F0"),
                     orderId = orderId,
                     orderInfo = orderInfo,
                     redirectUrl = _settings.RedirectUrl,
@@ -79,7 +80,7 @@ namespace BusinessLayer.Services
                 var client = _httpClientFactory.CreateClient();
                 var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
 
-                _logger.LogInformation("[MOMO] Sending payment request for OrderId={OrderId}, Amount={Amount}", orderId, amount);
+                _logger.LogInformation("[MOMO] Sending payment request for OrderId={OrderId}, Amount={Amount}", orderId, amount.ToString("F0"));
                 var response = await client.PostAsync(_settings.PaymentUrl, jsonContent);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
