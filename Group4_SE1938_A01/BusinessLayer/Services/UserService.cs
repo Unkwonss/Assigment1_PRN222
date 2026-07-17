@@ -396,20 +396,33 @@ namespace BusinessLayer.Services
 
         public async Task<Dictionary<int, int>> GetWeeklyTokenUsageMapAsync(List<int> userIds)
         {
+            DateTime now = DateTime.UtcNow;
+            int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
+            DateTime startOfWeek = now.AddDays(-1 * diff).Date;
+            return await GetTokenUsageMapAsync(userIds, startOfWeek, null);
+        }
+
+        public async Task<Dictionary<int, int>> GetTokenUsageMapAsync(List<int> userIds, DateTime? startDate, DateTime? endDate)
+        {
             if (userIds == null || userIds.Count == 0)
                 return new Dictionary<int, int>();
 
             DateTime now = DateTime.UtcNow;
             int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
-            DateTime startOfWeek = now.AddDays(-1 * diff).Date;
+            DateTime start = startDate ?? now.AddDays(-1 * diff).Date;
+            DateTime end = endDate ?? DateTime.UtcNow;
 
-            // Truy vấn qua repository, load kèm Session để so khớp UserId
-            var weeklyUsage = await _chatHistoryRepository.GetAllAsync(
-                filter: h => h.Timestamp >= startOfWeek && h.Session != null && userIds.Contains(h.Session.UserId),
+            if (endDate.HasValue)
+            {
+                end = endDate.Value.Date.AddDays(1).AddTicks(-1);
+            }
+
+            var usage = await _chatHistoryRepository.GetAllAsync(
+                filter: h => h.Timestamp >= start && h.Timestamp <= end && h.Session != null && userIds.Contains(h.Session.UserId),
                 includeProperties: "Session"
             );
 
-            return weeklyUsage
+            return usage
                 .GroupBy(h => h.Session.UserId)
                 .ToDictionary(
                     g => g.Key,

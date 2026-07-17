@@ -449,15 +449,10 @@
 
             var html = "";
             cites.forEach(function (c, index) {
-                var scoreText = '';
-                if (c.scorePercent !== undefined && c.scorePercent !== null) {
-                    scoreText = `<span class="text-glow fw-semibold">${c.scorePercent}% độ khớp</span>`;
-                }
                 html += `
                     <div class="citation-card hover-scale citation-card-item" id="cite-card-${c.chunkId}">
                         <div class="citation-card-title">
                             <span>Nguồn [${index + 1}] - ${c.documentTitle}</span>
-                            ${scoreText}
                             <i class="bi bi-bookmark-fill text-glow"></i>
                         </div>
                         <div class="citation-card-body font-monospace mt-1">${escapeHtml(c.snippet)}</div>

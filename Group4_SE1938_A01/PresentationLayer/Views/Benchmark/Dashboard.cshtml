@@ -138,18 +138,20 @@
         <div class="col-md-4">
             <div class="card card-glass p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
-                    <div class="text-muted-custom small uppercase fw-bold mb-2">Total Queries Serviced</div>
-                    <h3 class="text-glow text-white font-weight-bold mb-1">@tokenStats.Sum(x => x.MessageCount)</h3>
-                    <div class="small text-indigo"><i class="bi bi-chat-left-dots-fill"></i> Chat logs lưu trong DB</div>
+                    <div class="text-muted-custom small uppercase fw-bold mb-2">Token cuộc hội thoại</div>
+                    <h3 class="text-glow text-white font-weight-bold mb-1">@(((int)(ViewBag.TotalChatTokens ?? 0)).ToString("N0"))</h3>
+                    <div class="small text-pink-500" style="color: #ec4899;">
+                        <i class="bi bi-activity"></i> Tổng số token tiêu tốn khi chat
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card card-glass p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
-                    <div class="text-muted-custom small uppercase fw-bold mb-2">Total Tokens Logged</div>
-                    <h3 class="text-glow text-white font-weight-bold mb-1">@tokenStats.Sum(x => x.TotalTokens).ToString("N0")</h3>
-                    <div class="small text-pink-500" style="color: #ec4899;"><i class="bi bi-activity"></i> Tổng In + Out</div>
+                    <div class="text-muted-custom small uppercase fw-bold mb-2">Token xử lý tài liệu</div>
+                    <h3 class="text-glow text-white font-weight-bold mb-1">@(((int)(ViewBag.TotalDocProcessingTokens ?? 0)).ToString("N0"))</h3>
+                    <div class="small text-success"><i class="bi bi-file-earmark-text-fill"></i> Embedding của tài liệu</div>
                 </div>
             </div>
         </div>
@@ -172,7 +174,7 @@
         <div class="col-lg-6">
             <div class="card card-glass h-100">
                 <div class="card-header header-gradient py-3 px-4">
-                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-people-fill text-indigo-400"></i> Thống kê Token & Câu hỏi của từng Account</h5>
+                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-people-fill text-indigo-400"></i> Top 10 người sử dụng nhiều nhất</h5>
                 </div>
                 <div class="card-body p-4">
                     <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
@@ -181,7 +183,6 @@
                                 <tr>
                                     <th>Tài khoản</th>
                                     <th class="text-center">Số câu hỏi</th>
-                                    <th class="text-center">Tokens (In / Out)</th>
                                     <th class="text-end">Tổng Token</th>
                                 </tr>
                             </thead>
@@ -189,12 +190,12 @@
                                 @if(!tokenStats.Any())
                                 {
                                     <tr>
-                                        <td colspan="4" class="text-center py-4 text-muted">Chưa có log chat token nào trong DB.</td>
+                                        <td colspan="3" class="text-center py-4 text-muted">Chưa có log chat token nào trong DB.</td>
                                     </tr>
                                 }
                                 else
                                 {
-                                    foreach (var user in tokenStats)
+                                    foreach (var user in tokenStats.Take(10))
                                     {
                                         <tr>
                                             <td>
@@ -202,9 +203,6 @@
                                                 <div class="small text-muted-custom">@user.Email</div>
                                             </td>
                                             <td class="text-center"><span class="badge bg-indigo bg-opacity-25 text-glow border border-indigo border-opacity-10">@user.MessageCount</span></td>
-                                            <td class="text-center small font-monospace text-glow" style="color: #34d399;">
-                                                @user.TotalTokensIn.ToString("N0") / @user.TotalTokensOut.ToString("N0")
-                                            </td>
                                             <td class="text-end fw-bold text-info font-monospace">@user.TotalTokens.ToString("N0")</td>
                                         </tr>
                                     }
@@ -263,24 +261,10 @@
         </div>
     </div>
 
-    <!-- New Row: Token Over Time & Student Activity & Word Cloud -->
+    <!-- New Row: Student Activity & Word Cloud -->
     <div class="row g-4 mb-5">
-        <!-- Token Allocation Over Time (Line Chart) -->
-        <div class="col-lg-6">
-            <div class="card card-glass h-100">
-                <div class="card-header header-gradient py-3 px-4">
-                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-graph-up-arrow text-indigo-400"></i> Phân bổ Token theo thời gian (Prompt vs Completion)</h5>
-                </div>
-                <div class="card-body p-4 d-flex align-items-center justify-content-center">
-                    <div class="w-100" style="min-height: 250px; height: 250px;">
-                        <canvas id="tokenOverTimeChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Student Activity by Hour (Bar Chart) -->
-        <div class="col-lg-3">
+        <div class="col-lg-6">
             <div class="card card-glass h-100">
                 <div class="card-header header-gradient py-3 px-4">
                     <h5 class="m-0 text-white fw-bold"><i class="bi bi-clock-history text-pink-400"></i> Tần suất đặt câu hỏi (Khung giờ)</h5>
@@ -294,7 +278,7 @@
         </div>
 
         <!-- Word Frequency List -->
-        <div class="col-lg-3">
+        <div class="col-lg-6">
             <div class="card card-glass h-100">
                 <div class="card-header header-gradient py-3 px-4">
                     <h5 class="m-0 text-white fw-bold"><i class="bi bi-bar-chart-steps text-warning"></i> Từ khóa hỏi nhiều nhất</h5>
@@ -406,119 +390,13 @@
     </div>
 </div>
 
-<!-- === NEW STATS ROW 2: Subject Document Stats === -->
-<div class="container-fluid px-4 mb-5">
-    <div class="row g-4">
-        <div class="col-12">
-            <div class="card card-glass">
-                <div class="card-header header-gradient py-3 px-4">
-                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-database-fill-check text-warning"></i> Kho RAG theo Môn học (Tài liệu / Đã Index / Số Chunks)</h5>
-                </div>
-                <div class="card-body p-4">
-                    @{
-                        var subjectDocStats = ViewBag.SubjectDocStats as List<PresentationLayer.Models.SubjectDocStatsViewModel> ?? new List<PresentationLayer.Models.SubjectDocStatsViewModel>();
-                    }
-                    @if (!subjectDocStats.Any())
-                    {
-                        <div class="text-center text-muted py-4">Chưa có môn học nào trong hệ thống.</div>
-                    }
-                    else
-                    {
-                        var maxChunks = subjectDocStats.Max(x => x.ChunkCount);
-                        <div class="row g-3">
-                            @foreach (var sub in subjectDocStats)
-                            {
-                                var indexPct = sub.DocumentCount > 0 ? (sub.IndexedCount * 100 / sub.DocumentCount) : 0;
-                                var chunkPct = maxChunks > 0 ? (sub.ChunkCount * 100 / maxChunks) : 0;
-                                <div class="col-lg-4 col-md-6">
-                                    <div style="background:rgba(30,41,59,0.6);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px;">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div>
-                                                <div class="fw-bold text-white">@sub.SubjectCode</div>
-                                                <div class="small text-muted">@sub.SubjectName</div>
-                                            </div>
-                                            <span class="badge" style="background:rgba(251,191,36,0.2);color:#fbbf24;">@sub.ChunkCount chunks</span>
-                                        </div>
-                                        <div class="mb-2">
-                                            <div class="d-flex justify-content-between small mb-1">
-                                                <span style="color:#94a3b8;">Index coverage</span>
-                                                <span style="color:#34d399;">@sub.IndexedCount / @sub.DocumentCount docs</span>
-                                            </div>
-                                            <div style="background:rgba(255,255,255,0.08);border-radius:6px;height:6px;">
-                                                <div style="width:@indexPct%;background:linear-gradient(90deg,#34d399,#10b981);height:6px;border-radius:6px;"></div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div class="d-flex justify-content-between small mb-1">
-                                                <span style="color:#94a3b8;">Chunk volume</span>
-                                                <span style="color:#a78bfa;">@chunkPct%</span>
-                                            </div>
-                                            <div style="background:rgba(255,255,255,0.08);border-radius:6px;height:6px;">
-                                                <div style="width:@chunkPct%;background:linear-gradient(90deg,#6366f1,#a855f7);height:6px;border-radius:6px;"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-        const tokenOverTimeData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.TokenOverTime));
         const hourlyActivityData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.HourlyActivity));
-
-        // Token Over Time Chart
-        const tokenOverTimeCtx = document.getElementById('tokenOverTimeChart').getContext('2d');
-        new Chart(tokenOverTimeCtx, {
-            type: 'line',
-            data: {
-                labels: tokenOverTimeData.map(d => d.DateStr),
-                datasets: [
-                    {
-                        label: 'Prompt Tokens (In)',
-                        data: tokenOverTimeData.map(d => d.PromptTokens),
-                        borderColor: '#818cf8',
-                        backgroundColor: 'rgba(129, 140, 248, 0.08)',
-                        fill: true,
-                        tension: 0.3
-                    },
-                    {
-                        label: 'Completion Tokens (Out)',
-                        data: tokenOverTimeData.map(d => d.CompletionTokens),
-                        borderColor: '#f472b6',
-                        backgroundColor: 'rgba(244, 114, 182, 0.08)',
-                        fill: true,
-                        tension: 0.3
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { labels: { color: '#94a3b8' } }
-                },
-                scales: {
-                    x: {
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: '#94a3b8' }
-                    },
-                    y: {
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: '#94a3b8' }
-                    }
-                }
-            }
-        });
 
         // Hourly Activity Chart
         const hours24 = Array.from({length: 24}, (_, i) => i);

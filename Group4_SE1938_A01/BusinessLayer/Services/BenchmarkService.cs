@@ -627,6 +627,14 @@ namespace BusinessLayer.Services
                 .OrderByDescending(x => x.ChunkCount)
                 .ToList();
 
+            // Calculate custom token stats
+            stats.TotalQuestionTokens = historiesForTokens.Sum(h => h.TokensIn ?? 0);
+            stats.TotalAnswerTokens = historiesForTokens.Sum(h => h.TokensOut ?? 0);
+            stats.TotalChatTokens = stats.TotalQuestionTokens + stats.TotalAnswerTokens;
+
+            var chunks = await _chunkRepo.GetAllNoTrackingAsync();
+            stats.TotalDocProcessingTokens = chunks.Sum(c => c.TokenCount);
+
             return stats;
         }
         #endregion

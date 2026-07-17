@@ -19,5 +19,6 @@ namespace BusinessLayer.Interfaces
         Task<bool> ChangePasswordAsync(int userId, string oldPassword, string newPassword);
         Task<bool> IsDefaultPasswordAsync(int userId);
         Task<Dictionary<int, int>> GetWeeklyTokenUsageMapAsync(List<int> userIds);
+        Task<Dictionary<int, int>> GetTokenUsageMapAsync(List<int> userIds, System.DateTime? startDate, System.DateTime? endDate);
     }
 }

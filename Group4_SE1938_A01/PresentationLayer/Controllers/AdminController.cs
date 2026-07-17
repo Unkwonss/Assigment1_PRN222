@@ -131,7 +131,7 @@ namespace PresentationLayer.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ManageTokens(string? searchTerm, string? roleFilter)
+        public async Task<IActionResult> ManageTokens(string? searchTerm, string? roleFilter, DateTime? startDate, DateTime? endDate)
         {
             var allUsers = await _userService.GetAllUsersAsync();
             var targetUsers = allUsers.Where(u => u.Role == "Student" || u.Role == "Teacher");
@@ -151,9 +151,9 @@ namespace PresentationLayer.Controllers
                 );
             }
 
-            // Calculate weekly token usage for each active student (starting from Monday 00:00:00 UTC) via UserService
+            // Calculate token usage for each user within the specified date range via UserService
             var userIds = targetUsers.Select(u => u.UserId).ToList();
-            var weeklyUsage = await _userService.GetWeeklyTokenUsageMapAsync(userIds);
+            var tokenUsage = await _userService.GetTokenUsageMapAsync(userIds, startDate, endDate);
 
             var studentTokenList = targetUsers.Select(s => new UserTokenUsageViewModel
             {
@@ -163,13 +163,15 @@ namespace PresentationLayer.Controllers
                 Username = s.Username,
                 Role = s.Role,
                 WeeklyTokenLimit = s.WeeklyTokenLimit,
-                WeeklyTokenUsed = weeklyUsage.ContainsKey(s.UserId) ? weeklyUsage[s.UserId] : 0,
+                WeeklyTokenUsed = tokenUsage.ContainsKey(s.UserId) ? tokenUsage[s.UserId] : 0,
                 PurchasedTokenBalance = s.PurchasedTokenBalance,
                 PurchasedTokenExpiry = s.PurchasedTokenExpiry
             }).ToList();
 
             ViewBag.SearchTerm = searchTerm;
             ViewBag.RoleFilter = roleFilter;
+            ViewBag.StartDate = startDate;
+            ViewBag.EndDate = endDate;
             return View(studentTokenList);
         }
 

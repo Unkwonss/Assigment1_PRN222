@@ -22,7 +22,7 @@
             Swal.fire({
                 icon: 'success',
                 title: 'Thành công!',
-                text: '@Html.Raw(TempData["Success"])',
+                text: @Html.Raw(Json.Serialize(TempData["Success"])),
                 background: 'rgba(13, 17, 28, 0.95)',
                 color: '#fff',
                 confirmButtonColor: '#6366f1'
@@ -36,7 +36,7 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Lỗi!',
-                text: '@Html.Raw(TempData["Error"])',
+                text: @Html.Raw(Json.Serialize(TempData["Error"])),
                 background: 'rgba(13, 17, 28, 0.95)',
                 color: '#fff',
                 confirmButtonColor: '#ef4444'

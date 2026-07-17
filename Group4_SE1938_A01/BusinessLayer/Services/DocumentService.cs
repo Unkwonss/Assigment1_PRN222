@@ -351,6 +351,12 @@ namespace BusinessLayer.Services
 
         public async Task<SubjectDto> CreateSubjectAsync(SubjectDto subjectDto)
         {
+            var existing = await _subjectRepo.GetFirstOrDefaultAsync(s => s.SubjectCode.ToLower() == subjectDto.SubjectCode.ToLower());
+            if (existing != null)
+            {
+                throw new ArgumentException($"Mã môn học '{subjectDto.SubjectCode}' đã tồn tại trong hệ thống. Vui lòng nhập mã khác.");
+            }
+
             var subject = MapSubjectToEntity(subjectDto)!;
             await _subjectRepo.AddAsync(subject);
             await _subjectRepo.SaveAsync();
@@ -359,6 +365,12 @@ namespace BusinessLayer.Services
 
         public async Task UpdateSubjectAsync(SubjectDto subjectDto)
         {
+            var existingWithSameCode = await _subjectRepo.GetFirstOrDefaultAsync(s => s.SubjectCode.ToLower() == subjectDto.SubjectCode.ToLower() && s.SubjectId != subjectDto.SubjectId);
+            if (existingWithSameCode != null)
+            {
+                throw new ArgumentException($"Mã môn học '{subjectDto.SubjectCode}' đã tồn tại ở một môn học khác. Vui lòng nhập mã khác.");
+            }
+
             var existing = await _subjectRepo.GetByIdAsync(subjectDto.SubjectId);
             if (existing != null)
             {
@@ -512,6 +524,18 @@ namespace BusinessLayer.Services
 
         public async Task<ChapterDto> CreateChapterAsync(ChapterDto chapterDto)
         {
+            var existingNumber = await _chapterRepo.GetFirstOrDefaultAsync(c => c.SubjectId == chapterDto.SubjectId && c.ChapterNumber == chapterDto.ChapterNumber);
+            if (existingNumber != null)
+            {
+                throw new ArgumentException($"Số thứ tự chương '{chapterDto.ChapterNumber}' đã tồn tại trong môn học này.");
+            }
+
+            var existingName = await _chapterRepo.GetFirstOrDefaultAsync(c => c.SubjectId == chapterDto.SubjectId && c.ChapterName.ToLower() == chapterDto.ChapterName.ToLower());
+            if (existingName != null)
+            {
+                throw new ArgumentException($"Tên chương '{chapterDto.ChapterName}' đã tồn tại trong môn học này.");
+            }
+
             var chapter = MapChapterToEntity(chapterDto)!;
             await _chapterRepo.AddAsync(chapter);
             await _chapterRepo.SaveAsync();
@@ -520,6 +544,18 @@ namespace BusinessLayer.Services
 
         public async Task UpdateChapterAsync(ChapterDto chapterDto)
         {
+            var existingNumber = await _chapterRepo.GetFirstOrDefaultAsync(c => c.SubjectId == chapterDto.SubjectId && c.ChapterNumber == chapterDto.ChapterNumber && c.ChapterId != chapterDto.ChapterId);
+            if (existingNumber != null)
+            {
+                throw new ArgumentException($"Số thứ tự chương '{chapterDto.ChapterNumber}' đã tồn tại trong môn học này.");
+            }
+
+            var existingName = await _chapterRepo.GetFirstOrDefaultAsync(c => c.SubjectId == chapterDto.SubjectId && c.ChapterName.ToLower() == chapterDto.ChapterName.ToLower() && c.ChapterId != chapterDto.ChapterId);
+            if (existingName != null)
+            {
+                throw new ArgumentException($"Tên chương '{chapterDto.ChapterName}' đã tồn tại trong môn học này.");
+            }
+
             var existing = await _chapterRepo.GetByIdAsync(chapterDto.ChapterId);
             if (existing != null)
             {

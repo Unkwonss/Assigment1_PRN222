@@ -125,28 +125,40 @@ namespace PresentationLayer.Controllers
                 return RedirectToAction("Index");
             }
 
-            var subject = new SubjectDto 
-            { 
-                SubjectCode = subjectCode, 
-                SubjectName = subjectName,
-                DefaultModelId = defaultModelId ?? 1,
-                DefaultStrategyId = defaultStrategyId ?? 2,
-                DefaultChunkSize = defaultChunkSize ?? 500,
-                DefaultChunkOverlap = defaultChunkOverlap ?? 100
-            };
-            var created = await _documentService.CreateSubjectAsync(subject);
-            
-            // Assign teachers and subject head
-            var allIds = teacherIds ?? new List<int>();
-            if (managedByUserId.HasValue && !allIds.Contains(managedByUserId.Value))
+            try
             {
-                allIds.Add(managedByUserId.Value);
-            }
-            await _documentService.AssignTeachersToSubjectAsync(created.SubjectId, allIds, managedByUserId);
+                var subject = new SubjectDto 
+                { 
+                    SubjectCode = subjectCode, 
+                    SubjectName = subjectName,
+                    DefaultModelId = defaultModelId ?? 1,
+                    DefaultStrategyId = defaultStrategyId ?? 2,
+                    DefaultChunkSize = defaultChunkSize ?? 500,
+                    DefaultChunkOverlap = defaultChunkOverlap ?? 100
+                };
+                var created = await _documentService.CreateSubjectAsync(subject);
+                
+                // Assign teachers and subject head
+                var allIds = teacherIds ?? new List<int>();
+                if (managedByUserId.HasValue && !allIds.Contains(managedByUserId.Value))
+                {
+                    allIds.Add(managedByUserId.Value);
+                }
+                await _documentService.AssignTeachersToSubjectAsync(created.SubjectId, allIds, managedByUserId);
 
-            TempData["Success"] = "Thêm môn học thành công!";
-            await _hubContext.Clients.All.SendAsync("ReceiveSubjectUpdate");
-            await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Môn học mới", $"Môn học '{created.SubjectName}' đã được thêm mới thành công.", "success");
+                TempData["Success"] = "Thêm môn học thành công!";
+                await _hubContext.Clients.All.SendAsync("ReceiveSubjectUpdate");
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Môn học mới", $"Môn học '{created.SubjectName}' đã được thêm mới thành công.", "success");
+            }
+            catch (ArgumentException ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi thêm môn học mới.");
+                TempData["Error"] = "Đã xảy ra lỗi không xác định khi thêm môn học.";
+            }
             return RedirectToAction("Index");
         }
 
@@ -160,29 +172,41 @@ namespace PresentationLayer.Controllers
                 return RedirectToAction("Index");
             }
 
-            var subject = new SubjectDto 
-            { 
-                SubjectId = subjectId, 
-                SubjectCode = subjectCode, 
-                SubjectName = subjectName,
-                DefaultModelId = defaultModelId ?? 1,
-                DefaultStrategyId = defaultStrategyId ?? 2,
-                DefaultChunkSize = defaultChunkSize ?? 500,
-                DefaultChunkOverlap = defaultChunkOverlap ?? 100
-            };
-            await _documentService.UpdateSubjectAsync(subject);
-
-            // Assign teachers and subject head
-            var allIds = teacherIds ?? new List<int>();
-            if (managedByUserId.HasValue && !allIds.Contains(managedByUserId.Value))
+            try
             {
-                allIds.Add(managedByUserId.Value);
-            }
-            await _documentService.AssignTeachersToSubjectAsync(subjectId, allIds, managedByUserId);
+                var subject = new SubjectDto 
+                { 
+                    SubjectId = subjectId, 
+                    SubjectCode = subjectCode, 
+                    SubjectName = subjectName,
+                    DefaultModelId = defaultModelId ?? 1,
+                    DefaultStrategyId = defaultStrategyId ?? 2,
+                    DefaultChunkSize = defaultChunkSize ?? 500,
+                    DefaultChunkOverlap = defaultChunkOverlap ?? 100
+                };
+                await _documentService.UpdateSubjectAsync(subject);
 
-            TempData["Success"] = "Cập nhật môn học thành công!";
-            await _hubContext.Clients.All.SendAsync("ReceiveSubjectUpdate");
-            await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Cập nhật môn học", $"Môn học '{subject.SubjectName}' đã được cập nhật thành công.", "info");
+                // Assign teachers and subject head
+                var allIds = teacherIds ?? new List<int>();
+                if (managedByUserId.HasValue && !allIds.Contains(managedByUserId.Value))
+                {
+                    allIds.Add(managedByUserId.Value);
+                }
+                await _documentService.AssignTeachersToSubjectAsync(subjectId, allIds, managedByUserId);
+
+                TempData["Success"] = "Cập nhật môn học thành công!";
+                await _hubContext.Clients.All.SendAsync("ReceiveSubjectUpdate");
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Cập nhật môn học", $"Môn học '{subject.SubjectName}' đã được cập nhật thành công.", "info");
+            }
+            catch (ArgumentException ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật môn học.");
+                TempData["Error"] = "Đã xảy ra lỗi không xác định khi cập nhật môn học.";
+            }
             return RedirectToAction("Index");
         }
 
@@ -274,11 +298,23 @@ namespace PresentationLayer.Controllers
                 return Json(new { success = false, message = "Thông tin chương không hợp lệ." });
             }
 
-            var chapter = new ChapterDto { SubjectId = subjectId, ChapterNumber = chapterNumber, ChapterName = chapterName };
-            await _documentService.CreateChapterAsync(chapter);
-            await _hubContext.Clients.All.SendAsync("ReceiveChapterUpdate", subjectId);
-            await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Chương học mới", $"Chương '{chapter.ChapterNumber}: {chapter.ChapterName}' đã được tạo thành công.", "success");
-            return Json(new { success = true, message = "Thêm chương mới thành công!" });
+            try
+            {
+                var chapter = new ChapterDto { SubjectId = subjectId, ChapterNumber = chapterNumber, ChapterName = chapterName };
+                await _documentService.CreateChapterAsync(chapter);
+                await _hubContext.Clients.All.SendAsync("ReceiveChapterUpdate", subjectId);
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Chương học mới", $"Chương '{chapter.ChapterNumber}: {chapter.ChapterName}' đã được tạo thành công.", "success");
+                return Json(new { success = true, message = "Thêm chương mới thành công!" });
+            }
+            catch (ArgumentException ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi tạo chương mới.");
+                return Json(new { success = false, message = "Đã xảy ra lỗi không xác định." });
+            }
         }
 
         [HttpPost]
@@ -296,15 +332,27 @@ namespace PresentationLayer.Controllers
                 return Json(new { success = false, message = "Thông tin chỉnh sửa không hợp lệ." });
             }
 
-            var existing = await _documentService.GetChapterByIdAsync(chapterId);
-            if (existing == null) return Json(new { success = false, message = "Chương không tồn tại." });
+            try
+            {
+                var existing = await _documentService.GetChapterByIdAsync(chapterId);
+                if (existing == null) return Json(new { success = false, message = "Chương không tồn tại." });
 
-            existing.ChapterNumber = chapterNumber;
-            existing.ChapterName = chapterName;
-            await _documentService.UpdateChapterAsync(existing);
-            await _hubContext.Clients.All.SendAsync("ReceiveChapterUpdate", existing.SubjectId);
-            await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Cập nhật chương", $"Chương '{existing.ChapterNumber}: {existing.ChapterName}' đã được cập nhật.", "info");
-            return Json(new { success = true, message = "Cập nhật chương thành công!" });
+                existing.ChapterNumber = chapterNumber;
+                existing.ChapterName = chapterName;
+                await _documentService.UpdateChapterAsync(existing);
+                await _hubContext.Clients.All.SendAsync("ReceiveChapterUpdate", existing.SubjectId);
+                await _hubContext.Clients.All.SendAsync("ReceiveSystemNotification", "Cập nhật chương", $"Chương '{existing.ChapterNumber}: {existing.ChapterName}' đã được cập nhật.", "info");
+                return Json(new { success = true, message = "Cập nhật chương thành công!" });
+            }
+            catch (ArgumentException ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật chương.");
+                return Json(new { success = false, message = "Đã xảy ra lỗi không xác định." });
+            }
         }
 
         [HttpPost]

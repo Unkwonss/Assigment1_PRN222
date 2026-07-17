@@ -240,6 +240,11 @@ namespace PresentationLayer.Controllers
 
             var stats = await _benchmarkService.GetDashboardStatsAsync();
 
+            ViewBag.TotalChatTokens = stats.TotalChatTokens;
+            ViewBag.TotalQuestionTokens = stats.TotalQuestionTokens;
+            ViewBag.TotalAnswerTokens = stats.TotalAnswerTokens;
+            ViewBag.TotalDocProcessingTokens = stats.TotalDocProcessingTokens;
+
             ViewBag.TokenStats = stats.TokenStats.Select(x => new UserTokenStatsViewModel
             {
                 UserId = x.UserId,

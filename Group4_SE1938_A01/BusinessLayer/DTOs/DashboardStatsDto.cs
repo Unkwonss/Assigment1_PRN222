@@ -88,5 +88,10 @@ namespace BusinessLayer.DTOs
         public List<StrategyComparisonDto> StrategyComparison { get; set; } = new();
         public List<SubjectTokenStatsDto> SubjectTokenStats { get; set; } = new();
         public List<SubjectDocStatsDto> SubjectDocStats { get; set; } = new();
+
+        public int TotalChatTokens { get; set; }
+        public int TotalQuestionTokens { get; set; }
+        public int TotalAnswerTokens { get; set; }
+        public int TotalDocProcessingTokens { get; set; }
     }
 }
