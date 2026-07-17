@@ -154,10 +154,10 @@
                                         <td>
                                             <span class="badge @statusBadge">@t.TransactionStatus</span>
                                         </td>
-                                        <td class="text-muted-custom small">
+                                        <td class="text-white-50 small">
                                             @t.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")
                                         </td>
-                                        <td class="text-muted-custom small font-monospace">
+                                        <td class="text-white-50 small font-monospace">
                                             @t.TransactionId
                                         </td>
                                     </tr>
@@ -241,10 +241,22 @@
 
             <!-- Charts Row -->
             <div class="row g-4 mb-4">
-                <!-- Biểu đồ doanh thu 30 ngày qua -->
+                <!-- Biểu đồ doanh thu -->
                 <div class="col-lg-8">
                     <div class="card card-glass p-4 border-white border-opacity-10 shadow-lg">
-                        <h5 class="text-white fw-bold mb-3"><i class="bi bi-activity text-primary me-2"></i> Doanh thu trong 30 ngày qua</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <h5 class="text-white fw-bold mb-0" id="revenueChartTitle">
+                                <i class="bi bi-activity text-primary me-2"></i> Doanh thu trong 30 ngày qua
+                            </h5>
+                            <div style="width: auto; min-width: 140px;">
+                                <select class="form-select form-select-sm bg-dark border-white border-opacity-20 text-white" id="revenuePeriodSelect" onchange="changeRevenuePeriod(this.value)">
+                                    <option value="day" selected>Theo ngày</option>
+                                    <option value="month">Theo tháng</option>
+                                    <option value="quarter">Theo quý</option>
+                                    <option value="year">Theo năm</option>
+                                </select>
+                            </div>
+                        </div>
                         <div style="height: 300px; position: relative;">
                             <canvas id="revenueTimeChart"></canvas>
                         </div>
@@ -327,24 +339,53 @@
         const timeCtx = document.getElementById('revenueTimeChart').getContext('2d');
         
         // Dữ liệu từ Model C# đưa vào JS
-        const timeLabels = [];
-        const timeData = [];
-        
+        const dayLabels = [];
+        const dayData = [];
         @foreach (var entry in Model.Stats.RevenueOverTime)
         {
             <text>
-                timeLabels.push('@entry.Key');
-                timeData.push(@entry.Value);
+                dayLabels.push('@Html.Raw(entry.Key)');
+                dayData.push(@entry.Value);
             </text>
         }
 
-        new Chart(timeCtx, {
+        const monthLabels = [];
+        const monthData = [];
+        @foreach (var entry in Model.Stats.RevenueByMonth)
+        {
+            <text>
+                monthLabels.push('@Html.Raw(entry.Key)');
+                monthData.push(@entry.Value);
+            </text>
+        }
+
+        const quarterLabels = [];
+        const quarterData = [];
+        @foreach (var entry in Model.Stats.RevenueByQuarter)
+        {
+            <text>
+                quarterLabels.push('@Html.Raw(entry.Key)');
+                quarterData.push(@entry.Value);
+            </text>
+        }
+
+        const yearLabels = [];
+        const yearData = [];
+        @foreach (var entry in Model.Stats.RevenueByYear)
+        {
+            <text>
+                yearLabels.push('@Html.Raw(entry.Key)');
+                yearData.push(@entry.Value);
+            </text>
+        }
+
+        window.revenueChart = new Chart(timeCtx, {
             type: 'line',
             data: {
-                labels: timeLabels.length > 0 ? timeLabels : ["Chưa có dữ liệu"],
+                labels: dayLabels.length > 0 ? dayLabels : ["Chưa có dữ liệu"],
                 datasets: [{
                     label: 'Doanh thu (VND)',
-                    data: timeData.length > 0 ? timeData : [0],
+                    data: dayData.length > 0 ? dayData : [0],
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     borderWidth: 2,
@@ -386,6 +427,44 @@
             }
         });
 
+        window.changeRevenuePeriod = function (period) {
+            // Đồng bộ giá trị dropdown
+            const selectEl = document.getElementById('revenuePeriodSelect');
+            if (selectEl && selectEl.value !== period) {
+                selectEl.value = period;
+            }
+            
+            let labels = [];
+            let data = [];
+            let titleText = "";
+
+            if (period === 'day') {
+                labels = dayLabels;
+                data = dayData;
+                titleText = '<i class="bi bi-activity text-primary me-2"></i> Doanh thu trong 30 ngày qua';
+            } else if (period === 'month') {
+                labels = monthLabels;
+                data = monthData;
+                titleText = '<i class="bi bi-calendar-range text-primary me-2"></i> Doanh thu theo Tháng (12 tháng qua)';
+            } else if (period === 'quarter') {
+                labels = quarterLabels;
+                data = quarterData;
+                titleText = '<i class="bi bi-grid-3x3-gap text-primary me-2"></i> Doanh thu theo Quý (8 quý qua)';
+            } else if (period === 'year') {
+                labels = yearLabels;
+                data = yearData;
+                titleText = '<i class="bi bi-calendar3 text-primary me-2"></i> Doanh thu theo Năm';
+            }
+
+            document.getElementById('revenueChartTitle').innerHTML = titleText;
+
+            if (window.revenueChart) {
+                window.revenueChart.data.labels = labels.length > 0 ? labels : ["Chưa có dữ liệu"];
+                window.revenueChart.data.datasets[0].data = data.length > 0 ? data : [0];
+                window.revenueChart.update();
+            }
+        };
+
         // --- 2. Biểu đồ Tỷ trọng Doanh thu theo Gói ---
         const packageCtx = document.getElementById('revenuePackageChart').getContext('2d');
         
@@ -395,7 +474,7 @@
         @foreach (var entry in Model.Stats.RevenueByPackage)
         {
             <text>
-                packageLabels.push('@entry.Key');
+                packageLabels.push('@Html.Raw(entry.Key)');
                 packageData.push(@entry.Value);
             </text>
         }

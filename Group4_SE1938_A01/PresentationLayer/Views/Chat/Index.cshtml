@@ -233,6 +233,7 @@
 
                 if (data.length === 0) {
                     $("#chatMessagesArea").html('<div class="text-center text-muted-custom py-5">Bắt đầu nhập câu hỏi học tập đầu tiên để kích hoạt trợ lý RAG!</div>');
+                    checkAndToggleChatInput(sessionId);
                     return;
                 }
 
@@ -241,6 +242,7 @@
                 });
 
                 scrollToBottom();
+                checkAndToggleChatInput(sessionId);
             });
         }
 
@@ -363,6 +365,11 @@
                         showCitationsForHistory(res.historyId);
                     }
                     scrollToBottom();
+
+                    // Lock input if limit is reached
+                    if (res.isLimitExceeded) {
+                        checkAndToggleChatInput(activeSessionId);
+                    }
                 } else {
                     // Server returned success=false (validation error etc.)
                     var errorHtml = `
@@ -663,13 +670,29 @@
                 reloadChatSubjects();
             });
 
+            // Hàm kiểm tra và bật/tắt ô nhập liệu chat khi hết token
+            window.checkAndToggleChatInput = function (sessionId) {
+                if (!sessionId) return;
+                $.get("/Chat/CheckTokenLimit?sessionId=" + sessionId, function (res) {
+                    if (res.isExceeded) {
+                        $("#chatInputField").prop("disabled", true);
+                        $("#chatInputField").attr("placeholder", "⚠️ Hạn mức token của bạn đã hết. Vui lòng mua thêm gói token để tiếp tục.");
+                        $("#btnSendChat").prop("disabled", true);
+                    } else {
+                        $("#chatInputField").prop("disabled", false);
+                        $("#chatInputField").attr("placeholder", "Nhập câu hỏi học tập của bạn về chương học...");
+                        $("#btnSendChat").prop("disabled", false);
+                    }
+                });
+            }
+
             const currentUserId = '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value';
-            connection.on("ReceiveUserTokenUpdate", function (updatedUserId, newBalance) {
+            connection.on("ReceiveUserTokenLimitUpdated", function (updatedUserId, newLimit, purchasedBalance) {
                 if (updatedUserId.toString() === currentUserId) {
                     Swal.fire({
                         icon: 'success',
                         title: 'Đã cập nhật Token!',
-                        text: 'Hạn mức token khả dụng của bạn đã được hệ thống cập nhật tăng lên. Bạn có thể tiếp tục trò chuyện ngay bây giờ!',
+                        text: 'Tài khoản của bạn đã được cộng thêm/cập nhật hạn mức token realtime từ hệ thống. Bạn có thể trò chuyện tiếp tục!',
                         background: 'rgba(13, 17, 28, 0.95)',
                         color: '#fff',
                         confirmButtonColor: '#10b981',
@@ -678,14 +701,11 @@
                         timer: 5000,
                         showConfirmButton: false
                     });
-                    
-                    // Nếu đang có thông báo hết hạn mức ở cuối chat area, có thể chèn một thông báo thông báo hệ thống đã mở khóa
-                    $("#chatMessagesArea").append(`
-                        <div class="chat-bubble chat-bubble-bot align-self-start border border-success border-opacity-20" style="background: rgba(16, 185, 129, 0.05);">
-                            <div class="small text-success"><i class="bi bi-shield-check-fill me-1"></i> [Hệ thống] Hạn mức của bạn đã được Admin nâng cấp realtime. Bạn đã có thể trò chuyện tiếp tục!</div>
-                        </div>
-                    `);
                     scrollToBottom();
+                    
+                    if (activeSessionId) {
+                        checkAndToggleChatInput(activeSessionId);
+                    }
                 }
             });
 

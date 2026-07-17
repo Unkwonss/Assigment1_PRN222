@@ -139,7 +139,7 @@
                             // Nếu có token mua và chưa hết hạn, trạng thái có thêm nhãn VIP
                             bool hasActivePaidTokens = user.PurchasedTokenBalance > 0 && (user.PurchasedTokenExpiry == null || user.PurchasedTokenExpiry > DateTime.UtcNow);
 
-                            <tr>
+                            <tr id="user-row-@user.UserId">
                                 <td><strong class="text-muted-custom">#@user.UserId</strong></td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
@@ -147,12 +147,9 @@
                                             @(string.IsNullOrEmpty(user.FullName) ? "?" : user.FullName[0].ToString().ToUpper())
                                         </div>
                                         <div>
-                                            <span class="fw-semibold text-white d-block">
+                                            <span class="fw-semibold text-white d-block user-fullname-span">
                                                 @user.FullName
-                                                @if (hasActivePaidTokens)
-                                                {
-                                                    <span class="badge bg-warning text-dark small ms-1" style="font-size: 0.65rem; padding: 2px 4px;">PRO</span>
-                                                }
+                                                <span class="user-pro-badge badge bg-warning text-dark small ms-1 @(hasActivePaidTokens ? "" : "d-none")" style="font-size: 0.65rem; padding: 2px 4px;">PRO</span>
                                             </span>
                                             <small class="text-muted-custom" style="font-size: 0.75rem;">@user.Email</small>
                                         </div>
@@ -168,22 +165,22 @@
                                         <span class="badge bg-secondary bg-opacity-10 text-muted-custom border border-secondary border-opacity-20 px-2 py-1">Sinh viên</span>
                                     }
                                 </td>
-                                <td class="text-white fw-bold">@user.WeeklyTokenLimit.ToString("N0")</td>
-                                <td>
+                                <td class="text-white fw-bold user-limit-val">@user.WeeklyTokenLimit.ToString("N0")</td>
+                                <td class="user-used-cell" data-used="@user.WeeklyTokenUsed" data-limit="@user.WeeklyTokenLimit">
                                     <div class="d-flex align-items-center justify-content-between mb-1">
-                                        <span class="text-glow text-white small">@user.WeeklyTokenUsed.ToString("N0")</span>
-                                        <span class="text-muted-custom small">@usagePct%</span>
+                                        <span class="text-glow text-white small user-used-val">@user.WeeklyTokenUsed.ToString("N0")</span>
+                                        <span class="text-muted-custom small user-pct-val">@usagePct%</span>
                                     </div>
                                     <div class="progress bg-dark bg-opacity-50" style="height: 6px; border-radius: 3px;">
-                                        <div class="progress-bar @progressColorClass" role="progressbar" 
+                                        <div class="progress-bar user-progress-bar @progressColorClass" role="progressbar" 
                                              style="width: @usagePct%;" 
                                              aria-valuenow="@user.WeeklyTokenUsed" 
                                              aria-valuemin="0" 
                                              aria-valuemax="@user.WeeklyTokenLimit"></div>
                                     </div>
                                 </td>
-                                <td class="text-white">@user.RemainingTokens.ToString("N0")</td>
-                                <td>
+                                <td class="text-white user-remaining-val">@user.RemainingTokens.ToString("N0")</td>
+                                <td class="user-purchased-val">
                                     @if (user.PurchasedTokenBalance > 0)
                                     {
                                         <span class="text-warning fw-bold font-monospace">+@user.PurchasedTokenBalance.ToString("N0")</span>
@@ -207,7 +204,7 @@
                                     }
                                 </td>
                                 <td>
-                                    <span class="badge @badgeClass px-2 py-1">@statusText</span>
+                                    <span class="badge user-status-badge @badgeClass px-2 py-1">@statusText</span>
                                 </td>
                                 <td class="text-end">
                                     <button class="btn btn-sm btn-outline-glass btn-edit-limit" 
@@ -296,6 +293,7 @@
     </div>
 </div>
 
+<script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Handle loading data to edit individual limit modal
@@ -311,5 +309,93 @@
                 document.getElementById('editLimitValue').value = limit;
             });
         });
+
+        // --- SignalR Realtime Updates ---
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/newsHub")
+            .withAutomaticReconnect()
+            .build();
+
+        // Helper to format number
+        function formatNumber(num) {
+            return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
+        }
+
+        // Helper to update progress bar and status
+        function updateRowStatus($row, limit, used) {
+            var pct = 0;
+            if (limit > 0) {
+                pct = Math.min(100.0, Math.round((used / limit) * 100.0, 1));
+            } else {
+                pct = 100.0;
+            }
+
+            // Update used & pct labels
+            $row.find('.user-used-val').text(formatNumber(used));
+            $row.find('.user-pct-val').text(pct + '%');
+
+            // Update progress bar width and class
+            var $bar = $row.find('.user-progress-bar');
+            $bar.css('width', pct + '%');
+            $bar.attr('aria-valuenow', used);
+            $bar.attr('aria-valuemax', limit);
+
+            // Update remaining
+            var remaining = Math.max(0, limit - used);
+            $row.find('.user-remaining-val').text(formatNumber(remaining));
+
+            // Update status badge class and text
+            var $badge = $row.find('.user-status-badge');
+            $badge.removeClass('bg-success bg-warning bg-danger text-success text-warning text-danger border-success border-warning border-danger');
+            
+            if (pct >= 100.0) {
+                $bar.removeClass('bg-success bg-warning').addClass('bg-danger');
+                $badge.addClass('bg-danger bg-opacity-25 text-danger border border-danger border-opacity-20').text('Hết hạn mức');
+            } else if (pct >= 80.0) {
+                $bar.removeClass('bg-success bg-danger').addClass('bg-warning');
+                $badge.addClass('bg-warning bg-opacity-25 text-warning border border-warning border-opacity-20').text('Cảnh báo');
+            } else {
+                $bar.removeClass('bg-warning bg-danger').addClass('bg-success');
+                $badge.addClass('bg-success bg-opacity-25 text-success border border-success border-opacity-20').text('An toàn');
+            }
+        }
+
+        // 1. Lắng nghe cập nhật hạn mức (hoặc token mua thêm)
+        connection.on("ReceiveUserTokenLimitUpdated", function (userId, newLimit, purchasedBalance) {
+            var $row = $('#user-row-' + userId);
+            if ($row.length > 0) {
+                var $purchasedVal = $row.find('.user-purchased-val');
+                if (purchasedBalance > 0) {
+                    $purchasedVal.html('<span class="text-warning fw-bold font-monospace">+' + formatNumber(purchasedBalance) + '</span>');
+                    $row.find('.user-pro-badge').removeClass('d-none');
+                } else {
+                    $purchasedVal.html('<span class="text-muted-custom">-</span>');
+                    $row.find('.user-pro-badge').addClass('d-none');
+                }
+
+                // Cập nhật lại logic hạn mức nếu cần
+                var $cell = $row.find('.user-used-cell');
+                var used = parseInt($cell.attr('data-used')) || 0;
+                var baseLimit = parseInt($row.find('.user-limit-val').text().replace(/,/g, '')) || 0;
+                
+                var activeLimit = baseLimit + purchasedBalance;
+                $cell.attr('data-limit', activeLimit);
+                updateRowStatus($row, activeLimit, used);
+            }
+        });
+
+        // 2. Lắng nghe cập nhật lượng token đã sử dụng khi user chat
+        connection.on("ReceiveUserTokenUsageUpdated", function (userId, totalWeeklyUsed) {
+            var $row = $('#user-row-' + userId);
+            if ($row.length > 0) {
+                var $cell = $row.find('.user-used-cell');
+                $cell.attr('data-used', totalWeeklyUsed);
+                
+                var limit = parseInt($cell.attr('data-limit')) || 0;
+                updateRowStatus($row, limit, totalWeeklyUsed);
+            }
+        });
+
+        connection.start().catch(err => console.error("SignalR Connection Error: ", err));
     });
 </script>

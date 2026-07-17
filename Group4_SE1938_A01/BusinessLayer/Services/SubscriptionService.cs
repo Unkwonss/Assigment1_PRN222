@@ -241,6 +241,7 @@ namespace BusinessLayer.Services
 
         public async Task<IEnumerable<UserTransactionDto>> GetAllTransactionsAsync()
         {
+            await CleanExpiredPendingTransactionsAsync();
             var transactions = await _transactionRepo.GetAllNoTrackingAsync(
                 includeProperties: "User,Package"
             );
@@ -260,6 +261,7 @@ namespace BusinessLayer.Services
 
         public async Task<IEnumerable<UserTransactionDto>> GetTransactionsByUserIdAsync(int userId)
         {
+            await CleanExpiredPendingTransactionsAsync();
             var transactions = await _transactionRepo.GetAllNoTrackingAsync(
                 filter: t => t.UserId == userId,
                 includeProperties: "Package"
@@ -279,6 +281,7 @@ namespace BusinessLayer.Services
 
         public async Task<SubscriptionStatsDto> GetSubscriptionStatsAsync()
         {
+            await CleanExpiredPendingTransactionsAsync();
             var transactions = await _transactionRepo.GetAllNoTrackingAsync(includeProperties: "Package");
             var stats = new SubscriptionStatsDto();
 
@@ -330,7 +333,76 @@ namespace BusinessLayer.Services
             }
             stats.RevenueOverTime = timeMap;
 
+            // 5. Doanh thu theo tháng (12 tháng qua)
+            var monthLimit = DateTime.UtcNow.AddMonths(-12);
+            var last12MonthsTransactions = successTransactions
+                .Where(t => t.CreatedAt >= monthLimit)
+                .OrderBy(t => t.CreatedAt)
+                .ToList();
+            var monthMap = new Dictionary<string, decimal>();
+            foreach (var t in last12MonthsTransactions)
+            {
+                string monthStr = t.CreatedAt.ToLocalTime().ToString("MM/yyyy");
+                if (!monthMap.ContainsKey(monthStr)) monthMap[monthStr] = 0;
+                monthMap[monthStr] += t.Amount;
+            }
+            stats.RevenueByMonth = monthMap;
+
+            // 6. Doanh thu theo quý (trong 8 quý qua)
+            var quarterLimit = DateTime.UtcNow.AddYears(-2);
+            var last8QuartersTransactions = successTransactions
+                .Where(t => t.CreatedAt >= quarterLimit)
+                .OrderBy(t => t.CreatedAt)
+                .ToList();
+            var quarterMap = new Dictionary<string, decimal>();
+            foreach (var t in last8QuartersTransactions)
+            {
+                var dt = t.CreatedAt.ToLocalTime();
+                int quarter = (dt.Month - 1) / 3 + 1;
+                string quarterStr = $"Quý {quarter}/{dt.Year}";
+                if (!quarterMap.ContainsKey(quarterStr)) quarterMap[quarterStr] = 0;
+                quarterMap[quarterStr] += t.Amount;
+            }
+            stats.RevenueByQuarter = quarterMap;
+
+            // 7. Doanh thu theo năm (tất cả các năm)
+            var yearMap = new Dictionary<string, decimal>();
+            var sortedSuccessTransactions = successTransactions.OrderBy(t => t.CreatedAt).ToList();
+            foreach (var t in sortedSuccessTransactions)
+            {
+                string yearStr = t.CreatedAt.ToLocalTime().ToString("yyyy");
+                if (!yearMap.ContainsKey(yearStr)) yearMap[yearStr] = 0;
+                yearMap[yearStr] += t.Amount;
+            }
+            stats.RevenueByYear = yearMap;
+
             return stats;
+        }
+
+        private async Task CleanExpiredPendingTransactionsAsync()
+        {
+            try
+            {
+                DateTime threshold = DateTime.UtcNow.AddMinutes(-10);
+                var expiredTransactions = await _transactionRepo.GetAllAsync(
+                    filter: t => t.TransactionStatus == "Pending" && t.CreatedAt < threshold
+                );
+
+                var list = expiredTransactions.ToList();
+                if (list.Any())
+                {
+                    foreach (var t in list)
+                    {
+                        t.TransactionStatus = "Failed";
+                        _transactionRepo.Update(t);
+                    }
+                    await _transactionRepo.SaveAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CLEAN EXPIRED TX ERROR] {ex.Message}");
+            }
         }
     }
 }

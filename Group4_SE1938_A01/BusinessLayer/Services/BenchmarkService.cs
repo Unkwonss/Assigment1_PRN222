@@ -615,11 +615,13 @@ namespace BusinessLayer.Services
                 {
                     SubjectCode   = s.SubjectCode ?? "Unknown",
                     SubjectName   = s.SubjectName ?? "Unknown Subject",
-                    DocumentCount = s.Chapters.SelectMany(c => c.Documents).Count(),
+                    DocumentCount = s.Chapters.SelectMany(c => c.Documents).Count(d => d.Status != "Deleted"),
                     IndexedCount  = s.Chapters.SelectMany(c => c.Documents).Count(d => d.Status == "Indexed"),
                     ChunkCount    = s.Chapters.SelectMany(c => c.Documents)
-                                              .SelectMany(d => d.DocumentIndices)
-                                              .SelectMany(idx => idx.DocumentChunks)
+                                              .Where(d => d.Status == "Indexed")
+                                              .Select(d => d.DocumentIndices.OrderByDescending(idx => idx.IndexId).FirstOrDefault())
+                                              .Where(idx => idx != null)
+                                              .SelectMany(idx => idx!.DocumentChunks)
                                               .Count()
                 })
                 .OrderByDescending(x => x.ChunkCount)

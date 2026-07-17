@@ -24,13 +24,15 @@ namespace PresentationLayer.Controllers
         private readonly IDocumentService _documentService;
         private readonly ILogger<ChatController> _logger;
         private readonly IHubContext<NewsHub> _hubContext;
+        private readonly IUserService _userService;
 
-        public ChatController(IChatService chatService, IDocumentService documentService, ILogger<ChatController> logger, IHubContext<NewsHub> hubContext)
+        public ChatController(IChatService chatService, IDocumentService documentService, ILogger<ChatController> logger, IHubContext<NewsHub> hubContext, IUserService userService)
         {
             _chatService = chatService;
             _documentService = documentService;
             _logger = logger;
             _hubContext = hubContext;
+            _userService = userService;
         }
 
         [HttpGet]
@@ -118,6 +120,31 @@ namespace PresentationLayer.Controllers
             }));
         }
 
+        [HttpGet]
+        public async Task<IActionResult> CheckTokenLimit(Guid sessionId)
+        {
+            var session = await _chatService.GetSessionByIdAsync(sessionId);
+            if (session == null) return NotFound("Phiên trò chuyện không tồn tại.");
+
+            int userId = session.UserId;
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user == null) return NotFound("Người dùng không tồn tại.");
+
+            bool isExceeded = await _chatService.IsUserTokenLimitExceededAsync(userId);
+            
+            // Tính toán token đã dùng trong tuần
+            int totalWeeklyUsed = await _chatService.GetWeeklyTokenUsageBySessionAsync(sessionId);
+            int freeRemaining = Math.Max(0, user.WeeklyTokenLimit - totalWeeklyUsed);
+
+            return Json(new { 
+                isExceeded, 
+                remainingFree = freeRemaining, 
+                purchasedBalance = user.PurchasedTokenBalance,
+                weeklyUsed = totalWeeklyUsed,
+                weeklyLimit = user.WeeklyTokenLimit
+            });
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SendMessage(Guid sessionId, string message, int modelId, int strategyId, int chunkSize, int chunkOverlap)
@@ -132,13 +159,25 @@ namespace PresentationLayer.Controllers
                 var result = await _chatService.SendMessageWithScoresAsync(sessionId, message, modelId, strategyId, chunkSize, chunkOverlap);
                 var historyRecord = result.History;
                 
-                // Broadcast updated token usage to ManageTokens page in real-time via ChatService
+                // Broadcast updated token details to relevant pages in real-time
                 var session = await _chatService.GetSessionByIdAsync(sessionId);
+                bool isLimitExceeded = false;
                 if (session != null)
                 {
                     int userId = session.UserId;
-                    int totalWeeklyUsed = await _chatService.GetWeeklyTokenUsageBySessionAsync(sessionId);
-                    await _hubContext.Clients.All.SendAsync("ReceiveUserTokenUpdate", userId, totalWeeklyUsed);
+                    var user = await _userService.GetUserByIdAsync(userId);
+                    if (user != null)
+                    {
+                        isLimitExceeded = await _chatService.IsUserTokenLimitExceededAsync(userId);
+
+                        // 1. Broadcast updated limit and balance (for Chat page & MyHistory balance updates)
+                        int totalLimit = user.WeeklyTokenLimit + user.PurchasedTokenBalance;
+                        await _hubContext.Clients.All.SendAsync("ReceiveUserTokenLimitUpdated", userId, totalLimit, user.PurchasedTokenBalance);
+
+                        // 2. Broadcast updated token usage to ManageTokens page in real-time
+                        int totalWeeklyUsed = await _chatService.GetWeeklyTokenUsageBySessionAsync(sessionId);
+                        await _hubContext.Clients.All.SendAsync("ReceiveUserTokenUsageUpdated", userId, totalWeeklyUsed);
+                    }
                 }
 
                 return Json(new {
@@ -146,6 +185,7 @@ namespace PresentationLayer.Controllers
                     historyId = historyRecord.HistoryId,
                     userMessage = historyRecord.UserMessage,
                     botResponse = historyRecord.BotResponse,
+                    isLimitExceeded = isLimitExceeded,
                     timestamp = historyRecord.Timestamp?.AddHours(7).ToString("HH:mm"),
                     citations = result.Citations.Select(x => new {
                         x.Citation.CitationId,

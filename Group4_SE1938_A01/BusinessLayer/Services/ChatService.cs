@@ -465,6 +465,41 @@ namespace BusinessLayer.Services
                 }
             }
 
+            // ----------------------------------------------------
+            // LOGIC TRỪ TOKEN MUA THÊM (PurchasedTokenBalance)
+            // ----------------------------------------------------
+            if (user != null && (user.Role == "Student" || user.Role == "Teacher") && (promptTokens + completionTokens) > 0)
+            {
+                int usedTokens = promptTokens + completionTokens;
+
+                // Tính lượng token đã dùng trước tin nhắn này trong tuần
+                DateTime nowTime = DateTime.UtcNow;
+                int diffDays = (7 + (nowTime.DayOfWeek - DayOfWeek.Monday)) % 7;
+                DateTime startOfWeekDate = nowTime.AddDays(-1 * diffDays).Date;
+
+                var weeklyUsedTokens = await _historyRepo.GetAllAsync(
+                    filter: h => h.Session.UserId == session.UserId && h.Timestamp >= startOfWeekDate && h.HistoryId != history.HistoryId,
+                    includeProperties: "Session"
+                );
+                int totalWeeklyUsedBefore = weeklyUsedTokens.Sum(h => (h.TokensIn ?? 0) + (h.TokensOut ?? 0));
+
+                // Hạn mức free còn lại trước tin nhắn này
+                int freeRemainingBefore = Math.Max(0, user.WeeklyTokenLimit - totalWeeklyUsedBefore);
+
+                if (usedTokens > freeRemainingBefore)
+                {
+                    // Số token bị tràn (tiêu lạm vào gói mua thêm)
+                    int spillOver = usedTokens - freeRemainingBefore;
+
+                    if (user.PurchasedTokenBalance > 0)
+                    {
+                        user.PurchasedTokenBalance = Math.Max(0, user.PurchasedTokenBalance - spillOver);
+                        _userRepo.Update(user);
+                        await _userRepo.SaveAsync();
+                    }
+                }
+            }
+
             // Update session last updated time
             session.LastUpdatedAt = DateTime.UtcNow;
             _sessionRepo.Update(session);
@@ -648,6 +683,41 @@ namespace BusinessLayer.Services
             );
 
             return weeklyHistory.Sum(h => (h.TokensIn ?? 0) + (h.TokensOut ?? 0));
+        }
+
+        public async Task<bool> IsUserTokenLimitExceededAsync(int userId)
+        {
+            var user = await _userRepo.GetByIdAsync(userId);
+            if (user == null) return false;
+
+            // Bypass limit check for Admin
+            if (user.Role == "Admin") return false;
+
+            DateTime now = DateTime.UtcNow;
+            int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
+            DateTime startOfWeek = now.AddDays(-1 * diff).Date;
+
+            var weeklyUsedTokens = await _historyRepo.GetAllAsync(
+                filter: h => h.Session.UserId == userId && h.Timestamp >= startOfWeek,
+                includeProperties: "Session"
+            );
+            int totalWeeklyUsed = weeklyUsedTokens.Sum(h => (h.TokensIn ?? 0) + (h.TokensOut ?? 0));
+
+            bool hasActivePaidTokens = user.PurchasedTokenBalance > 0 && (user.PurchasedTokenExpiry == null || user.PurchasedTokenExpiry > DateTime.UtcNow);
+            int activeLimit = user.WeeklyTokenLimit;
+            if (hasActivePaidTokens)
+            {
+                activeLimit += user.PurchasedTokenBalance;
+            }
+
+            return totalWeeklyUsed >= activeLimit;
+        }
+
+        public async Task<bool> IsSessionTokenLimitExceededAsync(Guid sessionId)
+        {
+            var session = await _sessionRepo.GetByIdAsync(sessionId);
+            if (session == null) return false;
+            return await IsUserTokenLimitExceededAsync(session.UserId);
         }
     }
 }

@@ -343,68 +343,11 @@
     <!-- Removed Details Table -->
 </div>
 
-<!-- === NEW STATS ROW 1: Strategy Comparison + Subject Token Stats === -->
+<!-- === NEW STATS ROW 1: Subject Token Stats === -->
 <div class="container-fluid px-4 mb-5">
     <div class="row g-4">
-        <!-- So sánh Chunking Strategy -->
-        <div class="col-lg-6">
-            <div class="card card-glass h-100">
-                <div class="card-header header-gradient py-3 px-4">
-                    <h5 class="m-0 text-white fw-bold"><i class="bi bi-diagram-3-fill text-success"></i> So sánh Chunking Strategy (RBL Benchmark)</h5>
-                </div>
-                <div class="card-body p-4">
-                    @{
-                        var strategyComparison = ViewBag.StrategyComparison as List<PresentationLayer.Models.StrategyComparisonViewModel> ?? new List<PresentationLayer.Models.StrategyComparisonViewModel>();
-                    }
-                    @if (!strategyComparison.Any())
-                    {
-                        <div class="text-center text-muted py-4">Chưa có dữ liệu benchmark theo strategy. Hãy chạy thử nghiệm trước.</div>
-                    }
-                    else
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-glass align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>Strategy</th>
-                                        <th class="text-center">Precision</th>
-                                        <th class="text-center">Recall</th>
-                                        <th class="text-center">MRR</th>
-                                        <th class="text-center">Latency (ms)</th>
-                                        <th class="text-center">Tests</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var s in strategyComparison.OrderByDescending(x => x.AvgMRR))
-                                    {
-                                        <tr>
-                                            <td class="fw-bold text-white">@s.StrategyName</td>
-                                            <td class="text-center">
-                                                <span class="badge" style="background:rgba(99,102,241,0.25);color:#818cf8;">@s.AvgPrecision.ToString("P1")</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge" style="background:rgba(52,211,153,0.2);color:#34d399;">@s.AvgRecall.ToString("P1")</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge" style="background:rgba(244,114,182,0.2);color:#f472b6;">@s.AvgMRR.ToString("P1")</span>
-                                            </td>
-                                            <td class="text-center font-monospace" style="color:#fbbf24;">@s.AvgLatency.ToString("N0") ms</td>
-                                            <td class="text-center"><span class="badge bg-secondary">@s.TestCount</span></td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                        <div style="height:220px;">
-                            <canvas id="strategyChart"></canvas>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
         <!-- Token trung bình theo môn học -->
-        <div class="col-lg-6">
+        <div class="col-lg-12">
             <div class="card card-glass h-100">
                 <div class="card-header header-gradient py-3 px-4">
                     <h5 class="m-0 text-white fw-bold"><i class="bi bi-book-half text-info"></i> Mức độ sử dụng Chatbot theo Môn học</h5>

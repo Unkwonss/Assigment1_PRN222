@@ -62,21 +62,23 @@
                     </div>
                 </div>
                 <div class="py-2">
-                    <span class="fs-1 fw-extrabold text-glow-warning text-white">
+                    <span class="fs-1 fw-extrabold text-glow-warning text-white" id="purchased-token-balance-val">
                         +@Model.User.PurchasedTokenBalance.ToString("N0")
                     </span>
                     <span class="text-muted-custom small"> Tokens còn lại</span>
                 </div>
                 <div class="mt-auto pt-2 border-top border-white border-opacity-5 d-flex justify-content-between align-items-center">
                     <span class="text-muted-custom small">Trạng thái dùng gói:</span>
-                    @if (hasActivePaidTokens)
-                    {
-                        <span class="badge bg-warning text-dark fw-bold">ĐANG HOẠT ĐỘNG</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary bg-opacity-25 text-muted-custom">CHƯA KÍCH HOẠT</span>
-                    }
+                    <div id="purchased-token-status-badge">
+                        @if (hasActivePaidTokens)
+                        {
+                            <span class="badge bg-warning text-dark fw-bold">ĐANG HOẠT ĐỘNG</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary bg-opacity-25 text-muted-custom">CHƯA KÍCH HOẠT</span>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
@@ -207,3 +209,36 @@
         background: rgba(255,255,255,0.02) !important;
     }
 </style>
+
+<script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/newsHub")
+            .withAutomaticReconnect()
+            .build();
+
+        const currentUserId = '@Model.User.UserId';
+
+        function formatNumber(num) {
+            return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
+        }
+
+        connection.on("ReceiveUserTokenLimitUpdated", function (updatedUserId, newLimit, purchasedBalance) {
+            if (updatedUserId.toString() === currentUserId) {
+                // Cập nhật số dư token mua thêm
+                $('#purchased-token-balance-val').text('+' + formatNumber(purchasedBalance));
+
+                // Cập nhật status badge
+                const $badgeContainer = $('#purchased-token-status-badge');
+                if (purchasedBalance > 0) {
+                    $badgeContainer.html('<span class="badge bg-warning text-dark fw-bold">ĐANG HOẠT ĐỘNG</span>');
+                } else {
+                    $badgeContainer.html('<span class="badge bg-secondary bg-opacity-25 text-muted-custom">CHƯA KÍCH HOẠT</span>');
+                }
+            }
+        });
+
+        connection.start().catch(err => console.error("SignalR Connection Error: ", err));
+    });
+</script>

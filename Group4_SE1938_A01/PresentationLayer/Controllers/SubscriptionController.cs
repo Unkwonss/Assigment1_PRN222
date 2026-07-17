@@ -175,8 +175,8 @@ namespace PresentationLayer.Controllers
                         var user = await _userService.GetUserByIdAsync(userId);
                         if (user != null)
                         {
-                            // Phát SignalR thông báo số dư token mới
-                            await _hubContext.Clients.All.SendAsync("ReceiveUserTokenUpdate", userId, user.WeeklyTokenLimit + user.PurchasedTokenBalance);
+                            // Phát SignalR thông báo số dư token mới và token mua thêm
+                            await _hubContext.Clients.All.SendAsync("ReceiveUserTokenLimitUpdated", userId, user.WeeklyTokenLimit + user.PurchasedTokenBalance, user.PurchasedTokenBalance);
                         }
                     }
 
@@ -220,11 +220,11 @@ namespace PresentationLayer.Controllers
                         int userId = ParseUserIdFromExtraData(extraData);
                         if (success && userId > 0)
                         {
-                            var user = await _userService.GetUserByIdAsync(userId);
-                            if (user != null)
-                            {
-                                await _hubContext.Clients.All.SendAsync("ReceiveUserTokenUpdate", userId, user.WeeklyTokenLimit + user.PurchasedTokenBalance);
-                            }
+                             var user = await _userService.GetUserByIdAsync(userId);
+                             if (user != null)
+                             {
+                                 await _hubContext.Clients.All.SendAsync("ReceiveUserTokenLimitUpdated", userId, user.WeeklyTokenLimit + user.PurchasedTokenBalance, user.PurchasedTokenBalance);
+                             }
                         }
                     }
                     else

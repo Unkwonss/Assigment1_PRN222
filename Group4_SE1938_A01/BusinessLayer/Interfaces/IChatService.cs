@@ -19,5 +19,7 @@ namespace BusinessLayer.Interfaces
         Task<ChatHistoryDto> SendMessageAsync(Guid sessionId, string userMessage, int embeddingModelId, int strategyId, int chunkSize, int chunkOverlap);
         Task<(ChatHistoryDto History, List<(ChatCitationDto Citation, float Score)> Citations)> SendMessageWithScoresAsync(Guid sessionId, string userMessage, int embeddingModelId, int strategyId, int chunkSize, int chunkOverlap);
         Task<int> GetWeeklyTokenUsageBySessionAsync(Guid sessionId);
+        Task<bool> IsUserTokenLimitExceededAsync(int userId);
+        Task<bool> IsSessionTokenLimitExceededAsync(Guid sessionId);
     }
 }
