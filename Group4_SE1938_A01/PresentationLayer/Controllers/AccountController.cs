@@ -237,14 +237,25 @@ namespace PresentationLayer.Controllers
                 Role         = model.Role
             };
 
-            var result = await _userService.CreateUserAsync(user);
-            if (result == null)
+            try
             {
-                TempData["Error"] = "Tên đăng nhập hoặc Email đã được sử dụng trong hệ thống.";
+                var result = await _userService.CreateUserAsync(user);
+                if (result == null)
+                {
+                    TempData["Error"] = "Tên đăng nhập hoặc Email đã được sử dụng trong hệ thống.";
+                }
+                else
+                {
+                    TempData["Success"] = $"Tạo tài khoản '{model.FullName}' thành công!";
+                }
             }
-            else
+            catch (ArgumentException ex)
             {
-                TempData["Success"] = $"Tạo tài khoản '{model.FullName}' thành công!";
+                TempData["Error"] = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi hệ thống: {ex.Message}";
             }
 
             return RedirectToAction("Users");
@@ -273,8 +284,20 @@ namespace PresentationLayer.Controllers
                 Role         = model.Role
             };
 
-            await _userService.UpdateUserAsync(user);
-            TempData["Success"] = $"Cập nhật tài khoản '{model.FullName}' thành công!";
+            try
+            {
+                await _userService.UpdateUserAsync(user);
+                TempData["Success"] = $"Cập nhật tài khoản '{model.FullName}' thành công!";
+            }
+            catch (ArgumentException ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi hệ thống: {ex.Message}";
+            }
+
             return RedirectToAction("Users");
         }
 

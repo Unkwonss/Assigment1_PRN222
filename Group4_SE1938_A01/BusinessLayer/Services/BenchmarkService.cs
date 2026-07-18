@@ -475,7 +475,7 @@ namespace BusinessLayer.Services
                 includeProperties: "Session,Session.User"
             );
             stats.TokenStats = historiesForTokens
-                .Where(h => h.Session != null && h.Session.User != null)
+                .Where(h => h.Session != null && h.Session.User != null && !string.Equals(h.Session.User.Role, "Admin", StringComparison.OrdinalIgnoreCase))
                 .GroupBy(h => new { h.Session.User.UserId, h.Session.User.FullName, h.Session.User.Email })
                 .Select(g => new UserTokenStatsDto
                 {

@@ -48,46 +48,22 @@
             </div>
         </div>
 
-        <!-- RAG Settings panel -->
-        <div class="border-top border-white border-opacity-10 pt-3 mt-3 d-none" id="ragSettingsPanel">
-            <a class="d-flex justify-content-between align-items-center text-glow text-decoration-none small fw-bold" data-bs-toggle="collapse" href="#collapseRagSettings" role="button">
-                <span><i class="bi bi-sliders"></i> Cấu hình RAG Sandbox</span>
-                <i class="bi bi-chevron-down"></i>
-            </a>
-            
-            <div class="collapse mt-2" id="collapseRagSettings">
-                <div class="p-2 rounded bg-dark bg-opacity-25" style="border: 1px solid var(--border-glass);">
-                    <div class="mb-2">
-                        <label class="small text-muted-custom">Mô hình nhúng (Model)</label>
-                        <select id="ragModel" class="form-select form-glass py-1 px-2" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()">
-                            @foreach (var m in models)
-                            {
-                                <option value="@m.ModelId">@m.ModelName</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="mb-2">
-                        <label class="small text-muted-custom">Chiến lược cắt (Strategy)</label>
-                        <select id="ragStrategy" class="form-select form-glass py-1 px-2" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()">
-                            @foreach (var s in strategies)
-                            {
-                                <option value="@s.StrategyId">@s.StrategyName</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-6">
-                            <label class="small text-muted-custom">Kích thước (Size)</label>
-                            <input type="number" id="ragSize" class="form-control form-glass py-1 px-2" value="500" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()" />
-                        </div>
-                        <div class="col-6">
-                            <label class="small text-muted-custom">Độ lặp (Overlap)</label>
-                            <input type="number" id="ragOverlap" class="form-control form-glass py-1 px-2" value="100" style="font-size:0.75rem;" onchange="onSandboxConfigChanged()" />
-                        </div>
-                    </div>
-                    <!-- Removed sandboxConfigStatus alert for cleaner UI -->
-                </div>
-            </div>
+        <!-- RAG Settings panel (Hidden) -->
+        <div id="ragSettingsPanel" style="display: none !important;">
+            <select id="ragModel">
+                @foreach (var m in models)
+                {
+                    <option value="@m.ModelId">@m.ModelName</option>
+                }
+            </select>
+            <select id="ragStrategy">
+                @foreach (var s in strategies)
+                {
+                    <option value="@s.StrategyId">@s.StrategyName</option>
+                }
+            </select>
+            <input type="number" id="ragSize" value="500" />
+            <input type="number" id="ragOverlap" value="100" />
         </div>
     </div>
 

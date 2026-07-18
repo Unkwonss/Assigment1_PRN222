@@ -301,6 +301,20 @@ namespace BusinessLayer.Services
 
         public async Task<UserDto> CreateUserAsync(UserDto userDto)
         {
+            // Check duplicate username
+            var existingUsersByUsername = await _userRepository.GetAllAsync(u => u.Username.ToLower() == userDto.Username.ToLower());
+            if (existingUsersByUsername.Any())
+            {
+                throw new ArgumentException($"Tên đăng nhập '{userDto.Username}' đã tồn tại trong hệ thống. Vui lòng chọn tên đăng nhập khác.");
+            }
+
+            // Check duplicate email
+            var existingUsersByEmail = await _userRepository.GetAllAsync(u => u.Email.ToLower() == userDto.Email.ToLower());
+            if (existingUsersByEmail.Any())
+            {
+                throw new ArgumentException($"Địa chỉ email '{userDto.Email}' đã tồn tại trong hệ thống. Vui lòng chọn email khác.");
+            }
+
             var user = MapToEntity(userDto)!;
             user.PasswordHash = HashPassword(user.PasswordHash);
             await _userRepository.AddAsync(user);
@@ -310,6 +324,20 @@ namespace BusinessLayer.Services
 
         public async Task UpdateUserAsync(UserDto userDto)
         {
+            // Check duplicate username
+            var existingUsersByUsername = await _userRepository.GetAllAsync(u => u.Username.ToLower() == userDto.Username.ToLower() && u.UserId != userDto.UserId);
+            if (existingUsersByUsername.Any())
+            {
+                throw new ArgumentException($"Tên đăng nhập '{userDto.Username}' đã tồn tại ở tài khoản khác. Vui lòng chọn tên đăng nhập khác.");
+            }
+
+            // Check duplicate email
+            var existingUsersByEmail = await _userRepository.GetAllAsync(u => u.Email.ToLower() == userDto.Email.ToLower() && u.UserId != userDto.UserId);
+            if (existingUsersByEmail.Any())
+            {
+                throw new ArgumentException($"Địa chỉ email '{userDto.Email}' đã tồn tại ở tài khoản khác. Vui lòng chọn email khác.");
+            }
+
             var existingUser = await _userRepository.GetByIdAsync(userDto.UserId);
             if (existingUser != null)
             {
